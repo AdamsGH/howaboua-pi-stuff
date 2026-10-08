@@ -67,7 +67,10 @@ export function registerCodexUi(pi: ExtensionAPI, runtime: CodexExtensionRuntime
 	pi.on("session_start", restoreNoteSaveContext);
 	pi.on("session_tree", restoreNoteSaveContext);
 	pi.on("session_compact", restoreNoteSaveContext);
-	pi.on("session_shutdown", () => { noteSaveSessionManager = undefined; });
+	pi.on("session_shutdown", () => {
+		noteSaveSessionManager = undefined;
+		invalidateUsageStatus();
+	});
 	pi.registerMessageRenderer<{ title?: unknown }>(CODEX_DEVELOPER_MESSAGE_TYPE, (message, { expanded, outputPad }, theme) =>
 		typeof message.content === "string" ? renderNotice(message,
 			typeof message.details?.title === "string" ? message.details.title : "Context update",
@@ -174,9 +177,10 @@ export function registerCodexUi(pi: ExtensionAPI, runtime: CodexExtensionRuntime
 		}
 		if (!isAdapterRuntime(resolveCodexRuntimePlanForState(ctx, runtime.state))) return;
 		const usageStatus = await fetchCodexUsageStatus(ctx);
+		// Shutdown retires ctx; check ownership before reading any of its getters.
+		if (generation !== usageGeneration) return;
 		const plan = resolveCodexRuntimePlanForState(ctx, runtime.state);
 		if (
-			generation !== usageGeneration ||
 			!ctx.hasUI ||
 			runtime.state.config.voiceFeaturesOnly ||
 			!runtime.state.config.ui.statusLine ||
