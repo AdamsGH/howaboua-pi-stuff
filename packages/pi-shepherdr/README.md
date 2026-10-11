@@ -63,25 +63,25 @@ Call `agents` with `{}` before first use, alone, then send flat request objects 
 | `attach` | Share context or join a board with an existing idle agent |
 | `detach` | Leave selected membership and retain read-only counterpart checkpoints |
 | `read` | Read the latest assistant reply or bounded terminal output |
-| `answer` | Answer a worker's blocking or asynchronous Pi Ask |
+| `reply` | Deliver an opaque reply to a worker's extension |
 | `watch` | Push future settlement from an existing Pi agent |
 | `unwatch` | Stop reporting an agent |
 
 `spawn` and `assign` block by default. Set `blocking: false` when the controller should continue other work immediately. A profile's `blocking` setting overrides the call for `spawn`. Task completion and blockage are then delivered automatically.
 
-`answer` requires the pending `ask_id` from `read` or a question report. It handles both blocking and asynchronous Ask prompts. It returns `accepted` only when that exact Ask persisted the supplied responses; an accepted retry sends no input. Answering an asynchronous question does not wait for the worker's task to finish.
+Nonblocking extension messages notify the controller once; blocking messages arrive with the worker's blocked result. Both remain visible in `read` and later task reports until the producer closes them. Each replyable message includes a ready `reply` call with its machine, target, extension and message ID. Fill in the extension's reply template. `send` does not resolve an extension message.
 
-Asynchronous Ask prompts notify the controller while the worker keeps working. Session-file events drive local and remote notifications without marking the worker blocked or settling its task. Duplicate notifications are suppressed across controller restoration. Update Pi Ask on workers together with Shepherdr on controllers.
+`reply` returns the extension's receipt after semantic delivery. Blocking messages also wait for resumed work unless another call already owns that wait. Nonblocking replies do not wait for the worker's task to finish. Shepherdr forwards strings unchanged. The producing extension owns their meaning, validation and retries.
 
-Needed input and work changes use `send`. It returns after submission, does not accept `blocking`, and never creates or changes a watch or task. Use `assign` only to delegate work whose result you need, not to exchange coordination messages. Close finished workers silently instead of waking them with completion acknowledgements or shutdown notices.
+Use `send` for messages and work updates without waiting or adding supervision. Use `assign` when you need the result: it also accepts updates to running work, sharing that work's pending result rather than replacing it. If another call is already waiting, the update returns after submission and leaves that waiter intact. Close finished workers silently instead of waking them with completion acknowledgements or shutdown notices.
 
 Delegation and explicit `watch` keep reporting subsequent work until `unwatch` or the agent's pane closes. Finishing or failing a task clears that task, not its watch. Follow-up messages through `send` retain completion reporting without replacing the task.
 
-Every `spawn` needs an `agent_type` and a concise two- or three-word `label`. The label names both the Herdr tab and Pi session; the routing `name` remains optional and is derived from it when omitted.
+Every `spawn` needs an `agent_type` and a concise `label`. The label names both the Herdr tab and Pi session; the routing `name` remains optional and is derived from it when omitted.
 
 Cancelling a blocking call does not kill its worker. The waiter detaches and the eventual result returns through normal asynchronous delivery.
 
-After Pi compaction or Pi Codex context rollover, the controller receives its active agents' exact machine and target, full delegated task and last observed status. Existing work stays assigned instead of being delegated again. This reminder does not start a turn or bypass normal turn preparation.
+After Pi compaction or Pi Codex context rollover, the controller receives its supervised agents' exact machine and target, submitted tasks and follow-up instructions, and last observed status, including settled and blocked workers. Read a target for its reply or pending extension messages. This reminder does not start a turn or bypass normal turn preparation.
 
 Prompts sent through `agents` identify peer messages versus delegated tasks and include the sender's host, session, workspace, tab and pane identity, with current names. Reports include source workspace and tab names too. Raw `herdr agent prompt` calls bypass this attribution. These are runtime locations, not the desktop window showing a pane.
 
@@ -122,7 +122,37 @@ Blocked commands return the built-in commands and currently registered, allowed 
 
 Idle messages start a prepared user turn. Messages arriving during a run use steering, promoted to developer messages when Pi Codex developer delivery is active. Otherwise they remain ordinary Pi custom messages.
 
-For `answer` inside Code or Notebook Mode, update Pi Ask on workers together with Shepherdr on controllers.
+### Extension messages
+
+An extension can publish a durable message without importing Shepherdr:
+
+```ts
+pi.appendEntry("shepherdr-extension-message", {
+  version: 1,
+  extension: "your-extension",
+  id: "unique-message-id",
+  state: "pending",
+  message: "Extension-authored text for the controller",
+  reply: "Extension-authored reply template", // optional
+  blocking: false,
+});
+```
+
+Use a unique ID per message within the extension. `blocking` says whether replying should wait for resumed work. Omit `reply` for messages requiring human handling. Close a message with another entry using the same `version`, `extension` and `id`, and `state: "closed"`. Local and remote readers follow the active session branch and expose every pending record.
+
+Register the reply handler on Pi's event bus:
+
+```ts
+pi.events.on("@howaboua/pi-shepherdr/extension-reply/v1", event => {
+  const { extension, id, message, respond } = event;
+  if (extension !== "your-extension") return;
+  respond(handleReply(id, message));
+});
+```
+
+Claim synchronously with `respond(string | Promise<string>)`. Resolve only after delivering the response and persisting its resulting state. Reject through that promise for validation or delivery errors. Shepherdr returns the opaque result string. Each extension owns one handler and must guard its session lifetime and retry semantics.
+
+Replies use the authenticated peer connection, including across machines, and can reach busy or blocked workers without starting a model turn. Missing handlers fail visibly. An unacknowledged delivery can still have reached its handler, so inspect the target before retrying. Update and reload Shepherdr on both ends and any producing extension that used the previous Ask-specific integration.
 
 ### Attach existing agents
 

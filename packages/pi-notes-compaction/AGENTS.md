@@ -1,1 +1,3 @@
-- Fresh-family binding must distinguish startup UI metadata from conversational work without accepting arbitrary custom entries. Changelog notifications consume global seen-version state during startup, even if a spawn later fails; reproduce first-after-update binding with isolated unseen changelog state.
+- Fresh-family binding may accept known startup UI metadata, never arbitrary custom entries. Startup changelogs consume global seen-version state even if spawn fails. Probe first-after-update binding with isolated unseen state.
+- PCC context-management/history-notes.ts and local-notes.ts define Notes compatibility. Compare executable calls/results. SQLite ownership and hybrid provenance do not authorise query or payload drift.
+- PCC may compact before Notes' hook. Consult owner policy before provider work, not after cancellation. Manual notes rollover waits for user input. Tool-requested rollover continues.

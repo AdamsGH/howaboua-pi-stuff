@@ -6,6 +6,7 @@ import type {
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { Check } from "typebox/value";
 import type {
 	CachedResponse,
 	LookupQuery,
@@ -44,16 +45,18 @@ export const NOTES_USAGE = "await tools.notes() // help";
 export const HISTORY_USAGE = "await tools.history() // help";
 const STRING = Type.Optional(Type.String());
 const INTEGER = Type.Optional(Type.Integer({ minimum: 1 }));
+const NULLABLE_STRING = Type.Optional(Type.Union([Type.String(), Type.Null()]));
+const LINE = Type.Optional(Type.Union([Type.Integer(), Type.Null()]));
 const NOTES_SCHEMA = Type.Object(
 	{
 		action: Type.Optional(StringEnum(NOTES_ACTIONS)),
 		path: STRING,
 		text: STRING,
-		prefix: STRING,
+		prefix: NULLABLE_STRING,
 		query: STRING,
-		path_prefix: STRING,
-		start_line: INTEGER,
-		stop_line: INTEGER,
+		path_prefix: NULLABLE_STRING,
+		start_line: LINE,
+		stop_line: LINE,
 		max_results: INTEGER,
 		max_files: INTEGER,
 		max_matches_per_file: INTEGER,
@@ -146,7 +149,32 @@ function relevant(
 	const key =
 		action === "search_contents" ? `search_${namespace}` : String(action);
 	const fields = FIELDS[key];
-	if (!fields) throw new Error("Unknown action");
+	if (!fields)
+		throw new Error(
+			namespace === "notes"
+				? "notes requires a supported action"
+				: "Unknown action",
+		);
+	if (namespace === "notes") {
+		for (const field of Object.keys(params))
+			if (field !== "action" && !fields.includes(field))
+				throw new Error(`notes ${String(action)} does not accept ${field}`);
+		if (
+			["read_file", "write_file", "append_to_file"].includes(String(action)) &&
+			(typeof params["path"] !== "string" || !params["path"])
+		)
+			throw new Error(`notes ${String(action)} requires path`);
+		if (
+			action === "search_contents" &&
+			(typeof params["query"] !== "string" || !params["query"])
+		)
+			throw new Error("notes search_contents requires query");
+		if (
+			["write_file", "append_to_file"].includes(String(action)) &&
+			typeof params["text"] !== "string"
+		)
+			throw new Error(`notes ${String(action)} requires text`);
+	}
 	return Object.fromEntries(
 		Object.entries(params).filter(
 			([key]) => key === "action" || fields.includes(key),
@@ -192,6 +220,16 @@ function discovery(
 							).join(" "),
 				]),
 			),
+			...(namespace === "notes"
+				? {
+						usage:
+							'await tools.notes({ action: "read_file", path: "checkpoint" })',
+						ranges:
+							"start_line/stop_line inclusive, 1-based; negative counts from end; 0/null/omitted uses first/last line; out-of-range clamps; reversed range returns empty content",
+						defaults:
+							"list max_results 20; search max_files/max_matches_per_file 20; limits clamp to 1..100; list name ascending; search name ascending, recent_file_first sorts created_at descending",
+					}
+				: {}),
 		});
 	}
 	return undefined;
@@ -484,14 +522,28 @@ export function createTools(
 			prepareArguments(args) {
 				if (args === undefined) return {};
 				if (!args || typeof args !== "object" || Array.isArray(args))
-					return args;
+					throw new Error(
+						'Supply an action object: await tools.notes({ action: "read_file", path: "checkpoint" }); tools.notes() returns help',
+					);
 				const params = { ...args } as Record<string, unknown>;
 				if (
 					params["action"] === "list_files_by_prefix" &&
 					params["max_files"] !== undefined
 				) {
-					params["max_results"] ??= params["max_files"];
+					if (!("max_results" in params))
+						params["max_results"] = params["max_files"];
 					delete params["max_files"];
+				}
+				if (!discovery("notes", params)) relevant("notes", params);
+				for (const [field, value] of Object.entries(params)) {
+					const schema =
+						NOTES_SCHEMA.properties[
+							field as keyof typeof NOTES_SCHEMA.properties
+						];
+					if (!schema || !Check(schema, value))
+						throw new Error(
+							`Invalid notes ${field}; call tools.notes() for exact arguments`,
+						);
 				}
 				return params;
 			},

@@ -9,6 +9,10 @@ import {
 	createSteerDelivery,
 	type TryCodexDeveloperMessage,
 } from "./ask/delivery.js";
+import {
+	publishAskRequest,
+	registerAskReplies,
+} from "./ask/extension-messages.js";
 import { isAskHelpInput, isSteeringAskInput } from "./ask/normalize.js";
 import { PENDING_ASK_ENTRY_TYPE, readPendingAsks } from "./ask/pending.js";
 import { createAskRuntime, createAskTool } from "./ask/tool.js";
@@ -27,57 +31,25 @@ export default async function humanInTheLoop(pi: ExtensionAPI): Promise<void> {
 	registerPackageChangelog(pi);
 	const trySendCodexDeveloperMessage = await loadCodexDeveloperMessageSender();
 	const askRuntime = createAskRuntime({
+		onRequestChange: (change) => publishAskRequest(pi, change),
 		deliverSteer: createSteerDelivery(pi, trySendCodexDeveloperMessage),
 		onBlockedChange: (state) => {
-			const notify = () => {
-				pi.events.emit(REALTIME_VOICE_PROMPT_CHANNEL, {
-					id: state.id,
-					active: state.active,
-					prompt: state.prompt,
-				});
-				pi.events.emit("herdr:blocked", {
-					active: state.active,
-					label: state.label,
-				});
-			};
-			// Publish before Herdr reports blocked, including calls nested inside exec.
-			try {
-				pi.appendEntry(
-					"pi-ask-active",
-					state.active
-						? {
-								version: 1,
-								state: "active",
-								id: state.id,
-								handoff: state.handoff,
-								prompts: state.prompts,
-							}
-						: { version: 1, state: "closed", id: state.id },
-				);
-			} finally {
-				if (!state.active) notify();
-			}
-			if (state.active) notify();
+			pi.events.emit(REALTIME_VOICE_PROMPT_CHANNEL, {
+				id: state.id,
+				active: state.active,
+				prompt: state.prompt,
+			});
+			pi.events.emit("herdr:blocked", {
+				active: state.active,
+				label: state.label,
+			});
 		},
 		onPendingChange: (update) => {
 			pi.appendEntry(PENDING_ASK_ENTRY_TYPE, update);
 		},
-		onSteerActiveChange: (request, active) => {
-			pi.appendEntry(
-				"pi-ask-active",
-				active
-					? {
-							version: 1,
-							state: "active",
-							id: request.id,
-							delivery: "steer",
-							prompts: request.prompts,
-						}
-					: { version: 1, state: "closed", id: request.id },
-			);
-		},
 	});
 	const ask = askRuntime.tool;
+	registerAskReplies(pi, askRuntime.reply);
 	const restorePending = (ctx: ExtensionContext) => {
 		askRuntime.restorePending(
 			readPendingAsks(ctx.sessionManager.getBranch()),

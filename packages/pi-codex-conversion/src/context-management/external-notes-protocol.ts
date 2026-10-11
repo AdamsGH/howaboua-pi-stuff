@@ -3,6 +3,7 @@ import type {
 	AgentToolResult,
 	ExtensionContext,
 	SessionEntry,
+	SessionBeforeCompactEvent,
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 
@@ -43,6 +44,8 @@ export interface NotesOwner {
 	identity(ctx: ExtensionContext): WindowIdentity | undefined;
 	projectMessages(messages: readonly AgentMessage[]): AgentMessage[];
 	projectBranch(entries: readonly SessionEntry[]): SessionEntry[];
+	/** Consult before compaction work; the owner's hook performs notes-only rollover. */
+	allowsCompaction?(reason: SessionBeforeCompactEvent["reason"]): boolean;
 	/** Only this owner's pristine initialization may precede a family binding. */
 	canBind?(ctx: ExtensionContext): boolean;
 	snapshotNotes?(entries: readonly SessionEntry[], agentName: string): import("./local-notes.ts").NoteSnapshotData;

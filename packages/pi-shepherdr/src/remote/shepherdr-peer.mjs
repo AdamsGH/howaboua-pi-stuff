@@ -99,7 +99,6 @@ export async function sendPeerMessage(
 	const { descriptor, sessionFile, agent } = await resolvePeerReceiver(
 		request,
 		expected,
-		Boolean(focus) || commands,
 	);
 	const id = randomUUID();
 	const frame =
@@ -130,9 +129,51 @@ export async function sendPeerMessage(
 /**
  * @param {(method: string, params: object) => Promise<unknown>} request
  * @param {import("../types.js").PaneInfo} expected
- * @param {boolean} allowBlocked
+ * @param {import("../types.js").ExtensionReply} reply
+ * @returns {Promise<string>}
  */
-export async function resolvePeerReceiver(request, expected, allowBlocked) {
+export async function sendPeerExtensionReply(request, expected, reply) {
+	const { descriptor, sessionFile, agent } = await resolvePeerReceiver(
+		request,
+		expected,
+	);
+	const id = randomUUID();
+	const frame =
+		JSON.stringify({
+			protocol: PEER_PROTOCOL,
+			kind: "extension-reply",
+			id,
+			token: descriptor.token,
+			sessionFile,
+			terminalId: agent.terminal_id,
+			extension: reply.extension,
+			messageId: reply.id,
+			message: reply.message,
+		}) + "\n";
+	const receipt = await deliverPeerFrame(
+		request,
+		expected,
+		{ text: "", sender: "" },
+		undefined,
+		descriptor,
+		sessionFile,
+		id,
+		frame,
+		true,
+	);
+	if (typeof receipt.result !== "string")
+		throw deliveryError(
+			"Extension reply was not acknowledged; inspect the target before retrying",
+			false,
+		);
+	return receipt.result;
+}
+
+/**
+ * @param {(method: string, params: object) => Promise<unknown>} request
+ * @param {import("../types.js").PaneInfo} expected
+ */
+export async function resolvePeerReceiver(request, expected) {
 	const result = await request("agent.get", { target: expected.pane_id });
 	const agent =
 		result &&
@@ -164,16 +205,6 @@ export async function resolvePeerReceiver(request, expected, allowBlocked) {
 	) {
 		throw deliveryError(
 			"Target Pi session changed or is not ready; resolve the target again",
-			true,
-		);
-	}
-	if (
-		!allowBlocked &&
-		"agent_status" in agent &&
-		agent.agent_status === "blocked"
-	) {
-		throw deliveryError(
-			"Target is blocked; answer its pending question first",
 			true,
 		);
 	}
@@ -215,6 +246,7 @@ export async function resolvePeerReceiver(request, expected, allowBlocked) {
  * @param {string} sessionFile
  * @param {string} id
  * @param {string} frame
+ * @param {boolean} [extensionReply]
  * @returns {Promise<import("../types.js").PeerDelivery>}
  */
 function deliverPeerFrame(
@@ -226,6 +258,7 @@ function deliverPeerFrame(
 	sessionFile,
 	id,
 	frame,
+	extensionReply = false,
 ) {
 	if (Buffer.byteLength(frame) > MAX_PEER_FRAME_BYTES) {
 		throw deliveryError("Peer message is too large", true);
@@ -257,7 +290,7 @@ function deliverPeerFrame(
 					!attempted,
 				),
 			);
-		const timer = setTimeout(failed, focus ? 55_000 : 10_000);
+		const timer = setTimeout(failed, focus || extensionReply ? 55_000 : 10_000);
 		timer.unref();
 		socket.setEncoding("utf8");
 		socket.on("error", failed);
@@ -305,6 +338,9 @@ function deliverPeerFrame(
 					} else
 						finish(undefined, {
 							command: reply.command,
+							...(typeof reply.result === "string"
+								? { result: reply.result }
+								: {}),
 							...(reply.commands === undefined
 								? {}
 								: { commands: reply.commands }),

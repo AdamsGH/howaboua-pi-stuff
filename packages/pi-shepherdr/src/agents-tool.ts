@@ -4,7 +4,6 @@ import {
 	getMarkdownTheme,
 } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
-import { answerAgent } from "./agents-answer.js";
 import {
 	AgentsParameters,
 	type AgentsParams,
@@ -19,6 +18,7 @@ import {
 	readAgentTerminal,
 } from "./agents-discovery.js";
 import { focusAgent } from "./agents-focus.js";
+import { replyAgent } from "./agents-reply.js";
 import { spawnAgent } from "./agents-spawn.js";
 import {
 	dispatchAgentWork,
@@ -28,7 +28,7 @@ import {
 import type { AgentBoard } from "./board/host.js";
 import type { AgentFleet } from "./fleet.js";
 import { resolvePiAgent } from "./herdr.js";
-import { attributeAgentPrompt, modelAsk } from "./messages.js";
+import { attributeAgentPrompt } from "./messages.js";
 import type { createPeerCommands } from "./peer-commands.js";
 import type { SharedAgentContext } from "./shared-context.js";
 
@@ -165,21 +165,12 @@ export function createAgentsTool(
 					...(view.assistant
 						? { reply: view.assistant.text }
 						: { reply: null }),
-					...(view.ask &&
-					(panel.agent_status === "blocked" || view.ask.delivery === "steer")
-						? {
-								ask: modelAsk(view.ask),
-							}
+					...(view.extensionMessages
+						? { extensionMessages: view.extensionMessages }
 						: {}),
 				});
 			}
 			if (params.action === "send" || params.action === "assign") {
-				if (panel.agent_status === "blocked") {
-					const view = await runtime.monitor.view(panel);
-					throw new Error(
-						`${panel.pane_id} is blocked${view.ask ? " on ask; use action=answer" : ""}`,
-					);
-				}
 				const message = required(params.message, "message");
 				const attributedMessage = await attributeAgentPrompt(
 					fleet.connected().client,
@@ -192,6 +183,8 @@ export function createAgentsTool(
 						panel,
 						attributedMessage,
 					);
+					if (!receipt.command)
+						runtime.monitor.noteMessage(panel.pane_id, message);
 					return toolResult({
 						sent: true,
 						...(receipt.command ? { commandSubmitted: true } : {}),
@@ -231,8 +224,8 @@ export function createAgentsTool(
 					dispatch.warning,
 				);
 			}
-			if (params.action === "answer") {
-				return answerAgent(runtime, panel, params, executionSignal, update);
+			if (params.action === "reply") {
+				return replyAgent(runtime, panel, params, executionSignal, update);
 			}
 			throw new Error(`unsupported action ${params.action}`);
 		},
@@ -294,20 +287,10 @@ export function createAgentsTool(
 			if (!options.expanded) return title;
 			const reply =
 				typeof details["reply"] === "string" ? details["reply"] : undefined;
-			const ask =
-				typeof details["ask"] === "object" && details["ask"] !== null
-					? (details["ask"] as { prompts?: unknown })
-					: undefined;
 			const informational = Object.fromEntries(
-				Object.entries(details).filter(
-					([key]) => key !== "reply" && key !== "ask",
-				),
+				Object.entries(details).filter(([key]) => key !== "reply"),
 			);
-			if (
-				!reply &&
-				!Array.isArray(ask?.prompts) &&
-				Object.keys(informational).length === 0
-			) {
+			if (!reply && Object.keys(informational).length === 0) {
 				return title;
 			}
 			const container = new Container();
@@ -322,22 +305,7 @@ export function createAgentsTool(
 				container.addChild(new Spacer(1));
 				container.addChild(new Markdown(reply, 0, 0, getMarkdownTheme()));
 			}
-			if (Array.isArray(ask?.prompts)) {
-				const titles = ask.prompts
-					.flatMap((prompt) =>
-						typeof prompt === "object" &&
-						prompt !== null &&
-						"title" in prompt &&
-						typeof prompt.title === "string"
-							? [prompt.title]
-							: [],
-					)
-					.join(", ");
-				if (titles) {
-					container.addChild(new Spacer(1));
-					container.addChild(new Text(theme.fg("warning", titles), 0, 0));
-				}
-			}
+
 			return container;
 		},
 	});

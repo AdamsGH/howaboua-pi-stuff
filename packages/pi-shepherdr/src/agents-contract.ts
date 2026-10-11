@@ -17,9 +17,9 @@ const ACTIONS = [
 	"attach",
 	"detach",
 	"read",
-	"answer",
+	"reply",
 ] as const;
-const BLOCKING_ACTIONS = new Set<string>(["spawn", "assign", "answer"]);
+const BLOCKING_ACTIONS = new Set<string>(["spawn", "assign", "reply"]);
 export const READ_SOURCES = ["latest", "visible", "recent"] as const;
 const STATUSES = ["idle", "working", "blocked", "done", "unknown"] as const;
 
@@ -50,17 +50,8 @@ const ACTION_FIELDS: Record<(typeof ACTIONS)[number], ReadonlySet<string>> = {
 	attach: new Set(["action", "machine", "target", "context", "board"]),
 	detach: new Set(["action", "machine", "target", "context", "board"]),
 	read: new Set(["action", "machine", "target", "source", "lines"]),
-	answer: new Set(["action", "machine", "target", "ask_id", "answers"]),
+	reply: new Set(["action", "machine", "target", "extension", "id", "message"]),
 };
-
-const AskAnswerParameters = Type.Object(
-	{
-		selections: Type.Optional(Type.Array(Type.String())),
-		other: Type.Optional(Type.String()),
-		comment: Type.Optional(Type.String()),
-	},
-	{ additionalProperties: false },
-);
 
 const AgentsRequest = Type.Object(
 	{
@@ -84,7 +75,7 @@ const AgentsRequest = Type.Object(
 		pane: Type.Optional(Type.String()),
 		cwd: Type.Optional(Type.String()),
 		message: Type.Optional(
-			Type.String({ description: "Initial task or follow-up" }),
+			Type.String({ description: "Task, follow-up or extension reply" }),
 		),
 		base: Type.Optional(Type.String({ description: "Review base branch" })),
 		blocking: Type.Optional(
@@ -100,8 +91,8 @@ const AgentsRequest = Type.Object(
 		status: Type.Optional(StringEnum(STATUSES)),
 		source: Type.Optional(StringEnum(READ_SOURCES)),
 		lines: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
-		ask_id: Type.Optional(Type.String()),
-		answers: Type.Optional(Type.Array(AskAnswerParameters)),
+		extension: Type.Optional(Type.String()),
+		id: Type.Optional(Type.String()),
 	},
 	{ additionalProperties: false },
 );
@@ -177,12 +168,13 @@ export function parseAgentsRequest(input: unknown): AgentsParams {
 		throw new Error(
 			`${action} requires context and board booleans; enable at least one`,
 		);
-	const askId = request["ask_id"];
-	if (action === "answer" && (typeof askId !== "string" || !askId.trim())) {
-		throw new Error("ask_id is required for answer");
-	}
-	if (action === "answer" && !Array.isArray(request["answers"])) {
-		throw new Error("answers is required for answer");
+	if (action === "reply") {
+		for (const field of ["extension", "id", "target"]) {
+			if (typeof request[field] !== "string" || !request[field].trim())
+				throw new Error(`${field} is required for reply`);
+		}
+		if (typeof request["message"] !== "string")
+			throw new Error("message is required for reply");
 	}
 	const unknown = Object.keys(request).filter(
 		(key) => !ACTION_FIELDS[action as keyof typeof ACTION_FIELDS].has(key),

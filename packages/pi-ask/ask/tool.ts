@@ -1,11 +1,13 @@
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { Check } from "typebox/value";
 import { AskParameters, type AskPrompt } from "./contracts.js";
 import {
 	type AskCoordinatorOptions,
 	createAskCoordinator,
 } from "./coordinator.js";
 import {
+	askInputProblem,
 	isAskHelpInput,
 	isSteeringAskInput,
 	normalizeAskInput,
@@ -34,13 +36,13 @@ export function createAskRuntime({
 	deliverSteer,
 	onBlockedChange,
 	onPendingChange,
-	onSteerActiveChange,
+	onRequestChange,
 }: AskToolOptions = {}) {
 	const coordinator = createAskCoordinator({
 		...(askInComposer ? { askInComposer } : {}),
 		...(deliverSteer ? { deliverSteer } : {}),
 		...(onPendingChange ? { onPendingChange } : {}),
-		...(onSteerActiveChange ? { onSteerActiveChange } : {}),
+		...(onRequestChange ? { onRequestChange } : {}),
 	});
 
 	const tool = defineTool({
@@ -49,6 +51,14 @@ export function createAskRuntime({
 		description: "Request user input or action; {} for help",
 		parameters: AskParameters,
 		executionMode: "sequential",
+		prepareArguments(input) {
+			const params = input === undefined ? {} : input;
+			const problem = askInputProblem(params);
+			if (problem) throw new Error(problem);
+			if (!Check(AskParameters, params))
+				throw new Error("Invalid ask arguments; ask({}) returns help");
+			return params;
+		},
 		async execute(toolCallId, params, signal, _onUpdate, ctx) {
 			if (isAskHelpInput(params)) {
 				return {
@@ -104,12 +114,20 @@ export function createAskRuntime({
 			const presentationSignal = signal
 				? AbortSignal.any([signal, coordinator.sessionSignal])
 				: coordinator.sessionSignal;
-			const rawResponses = await coordinator.present(ctx, prompts, {
-				handoff,
-				signal: presentationSignal,
-				onActiveChange: (active) =>
-					onBlockedChange?.({ ...blockedState, active }),
-			});
+			let rawResponses: unknown;
+			try {
+				rawResponses = await coordinator.present(ctx, prompts, {
+					id: toolCallId,
+					handoff,
+					signal: presentationSignal,
+					onActiveChange: (active) =>
+						onBlockedChange?.({ ...blockedState, active }),
+				});
+				coordinator.complete(toolCallId);
+			} catch (error) {
+				coordinator.complete(toolCallId, String(error));
+				throw error;
+			}
 			const responses = normalizeResponses(prompts, rawResponses);
 			if (!responses) {
 				return {
@@ -156,6 +174,7 @@ export function createAskRuntime({
 
 	return {
 		tool,
+		reply: coordinator.reply,
 		restorePending: coordinator.restorePending,
 		shutdown: coordinator.shutdown,
 	};

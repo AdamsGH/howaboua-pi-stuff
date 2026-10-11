@@ -1,5 +1,7 @@
 # Howaboua Pi Stuff
 
+[![GitHub stars](https://img.shields.io/github/stars/IgorWarzocha/howaboua-pi-stuff?style=flat)](https://github.com/IgorWarzocha/howaboua-pi-stuff/stargazers)
+
 The Pi extensions and skills I use to keep long agent sessions useful without building a fake operating system around them.
 
 Everything is published as a separate npm package. Install a bundle for the full setup, or pick only what you need. Revolutionary stuff. A table.

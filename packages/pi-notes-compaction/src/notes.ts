@@ -216,25 +216,34 @@ export function exportNotesSnapshot(
 }
 
 function canonicalPath(path: unknown, agent: string, required = true): string {
-	if (typeof path !== "string" || !path.trim()) {
-		if (required) throw new Error("Supply a note path");
+	if (path === undefined || path === null || path === "") {
+		if (required) throw new Error("Note file path is required");
 		return "";
 	}
+	if (typeof path !== "string")
+		throw new Error(
+			required ? "Note file path is required" : "Note prefix must be a string",
+		);
 	const root = `${agent}/notes`;
 	let value = path;
-	if (value === root) value = "";
-	else if (value.startsWith(`${root}/`)) value = value.slice(root.length + 1);
+	if (value === root) {
+		if (required)
+			throw new Error("Absolute note paths must use <agent>/notes/<path>");
+		value = "";
+	} else if (value.startsWith(`${root}/`)) value = value.slice(root.length + 1);
 	else if (value.startsWith("/"))
 		throw new Error(
 			"That agent's notes are not available here. Use a relative path for this agent.",
 		);
 	if (
 		(required && !value) ||
-		value.split("/").some((part) => part === ".." || part === ".") ||
-		/[\0\r\n]/.test(value)
+		(value !== "" &&
+			value.split("/").some((part) => !part || part === ".." || part === "."))
 	)
 		throw new Error(
-			"Use a virtual note path without dot segments or control characters",
+			required
+				? "Note paths cannot contain empty, . or .. components"
+				: "Note prefixes cannot contain empty, . or .. components",
 		);
 	return value;
 }
@@ -244,11 +253,8 @@ export function normalizeNoteParams(
 	agent: string,
 ): Record<string, unknown> {
 	const result = { ...params };
-	const needsPath = ["read_file", "write_file", "append_to_file"].includes(
-		String(params["action"]),
-	);
 	for (const field of ["path", "prefix", "path_prefix"])
-		if (field in params || field !== "path" || needsPath)
+		if (field in params)
 			result[field] = canonicalPath(params[field], agent, field === "path");
 	return result;
 }
@@ -285,12 +291,13 @@ export function useNotes(
 	if (action === "write_file" || action === "append_to_file") {
 		const path = params["path"] as string;
 		const text = params["text"];
-		if (typeof text !== "string") throw new Error("Supply note text");
+		if (typeof text !== "string")
+			throw new Error(`notes ${action} requires text`);
 		const previous = notes.get(path);
 		const next =
 			action === "append_to_file" ? (previous?.text ?? "") + text : text;
 		if (Buffer.byteLength(next) > 1_000_000)
-			throw new Error("Note exceeds 1 MB. Split it into separate paths.");
+			throw new Error("Note file exceeds the 1,000,000-byte limit");
 		const now = Date.now();
 		// Append never pretends to decode a remote base. The remote fragment remains separate.
 		const mode =
@@ -324,113 +331,101 @@ export function useNotes(
 			);
 		}
 		return {
-			path: `${root}${path}`,
-			chars: next.length,
-			operation:
-				mode === "append" ? "local_append_overlay" : "local_replacement",
+			source: "pi-session",
+			file: noteMetadata(revision, root),
 		};
 	}
+
 	if (action === "read_file") {
 		const path = params["path"] as string;
 		const note = notes.get(path);
-		if (!note) return { path: `${root}${path}`, file: null };
+		if (!note) return { source: "pi-session", file: null };
 		const lines = note.text.split("\n");
-		const start = integer(params["start_line"], 1, lines.length + 1);
-		const stop = integer(params["stop_line"], lines.length, lines.length);
-		let text = "";
-		let next = start;
-		while (next <= stop) {
-			const line = lines[next - 1] ?? "";
-			if (text.length + line.length > 32_000) {
-				if (!text)
-					throw new Error(
-						"This note line exceeds 32000 characters. Rewrite it as shorter lines to read it.",
-					);
-				break;
-			}
-			text += `${next > start ? "\n" : ""}${line}`;
-			next++;
-		}
+		const start = lineIndex(params["start_line"], lines.length, 0);
+		const stop = lineIndex(params["stop_line"], lines.length, lines.length - 1);
 		return {
-			path: `${root}${path}`,
-			text,
-			start_line: start,
-			total_lines: lines.length,
-			...(next <= stop ? { next_start_line: next } : {}),
-			operation:
-				note.mode === "replace" ? "local_replacement" : "local_append_overlay",
+			source: "pi-session",
+			file: {
+				...noteMetadata(note, root),
+				content: start <= stop ? lines.slice(start, stop + 1).join("\n") : "",
+				start_line: start + 1,
+				stop_line: Math.max(start, stop) + 1,
+				total_lines: lines.length,
+			},
 		};
 	}
 	if (action === "list_files_by_prefix") {
-		let files = [...notes.values()].filter((note) =>
-			note.path.startsWith(String(params["prefix"] ?? "")),
-		);
 		const by = params["file_order_by"];
-		files.sort((a, b) =>
-			by === "created_at"
-				? a.createdAt - b.createdAt
-				: by === "updated_at"
-					? a.updatedAt - b.updatedAt
-					: a.path.localeCompare(b.path),
-		);
-		if (params["file_order"] === "descending") files.reverse();
-		const maximum = integer(params["max_results"], 100, 100);
-		return {
-			files: files.slice(0, maximum).map((note) => ({
-				path: `${root}${note.path}`,
-				chars: note.text.length,
-				updated_at: note.updatedAt,
-			})),
-			truncated: files.length > maximum,
-		};
+		const direction = params["file_order"] === "descending" ? -1 : 1;
+		const files = [...notes.values()]
+			.filter((note) => note.path.startsWith(String(params["prefix"] ?? "")))
+			.sort(
+				(a, b) =>
+					(by === "created_at"
+						? a.createdAt - b.createdAt
+						: by === "updated_at"
+							? a.updatedAt - b.updatedAt
+							: a.path.localeCompare(b.path)) * direction,
+			)
+			.slice(0, integer(params["max_results"], 20, 100))
+			.map((note) => noteMetadata(note, root));
+		return { source: "pi-session", files };
 	}
-	if (
-		action !== "search_contents" ||
-		typeof params["query"] !== "string" ||
-		!params["query"]
-	)
-		throw new Error("Supply a nonempty search query");
+	if (action !== "search_contents")
+		throw new Error("notes requires a supported action");
+	const query = params["query"];
+	if (typeof query !== "string" || !query)
+		throw new Error("notes search_contents requires query");
 	const files = [...notes.values()].filter((note) =>
 		note.path.startsWith(String(params["path_prefix"] ?? "")),
 	);
-	if (params["recent_file_first"] === true)
-		files.sort((a, b) => b.updatedAt - a.updatedAt);
-	const found: {
-		path: string;
-		matches: { line: number; text: string }[];
-		truncated: boolean;
-	}[] = [];
-	let chars = 0;
-	let truncated = false;
+	files.sort(
+		params["recent_file_first"] === true
+			? (a, b) => b.createdAt - a.createdAt
+			: (a, b) => a.path.localeCompare(b.path),
+	);
+	const found: Record<string, unknown>[] = [];
 	for (const note of files) {
-		const all = note.text
+		const matches = note.text
 			.split("\n")
-			.flatMap((line, i) =>
-				line.includes(params["query"] as string)
-					? [{ line: i + 1, text: line.slice(0, 1000) }]
-					: [],
-			);
-		if (!all.length) continue;
-		const matches = all.slice(
-			0,
-			integer(params["max_matches_per_file"], 10, 100),
-		);
-		const size = JSON.stringify(matches).length;
-		if (
-			found.length >= integer(params["max_files"], 20, 100) ||
-			chars + size > 32_000
-		) {
-			truncated = true;
-			break;
-		}
+			.map((line, index) => ({ line_number: index + 1, line }))
+			.filter(({ line }) => line.includes(query))
+			.slice(0, integer(params["max_matches_per_file"], 20, 100));
+		if (!matches.length) continue;
 		found.push({
 			path: `${root}${note.path}`,
 			matches,
-			truncated: matches.length < all.length,
+			operation:
+				note.mode === "replace" ? "local_replacement" : "local_append_overlay",
 		});
-		chars += size;
+		if (found.length >= integer(params["max_files"], 20, 100)) break;
 	}
-	return { files: found, truncated };
+	return { source: "pi-session", files: found };
+}
+
+function noteMetadata(
+	note: NoteRevision,
+	root: string,
+): Record<string, unknown> {
+	return {
+		operation:
+			note.mode === "replace" ? "local_replacement" : "local_append_overlay",
+		path: `${root}${note.path}`,
+		bytes: Buffer.byteLength(note.text, "utf8"),
+		created_at: new Date(note.createdAt).toISOString(),
+		updated_at: new Date(note.updatedAt).toISOString(),
+	};
+}
+
+function lineIndex(
+	value: unknown,
+	lineCount: number,
+	fallback: number,
+): number {
+	if (typeof value !== "number" || !Number.isInteger(value) || value === 0)
+		return fallback;
+	const index = value > 0 ? value - 1 : lineCount + value;
+	return Math.max(0, Math.min(index, Math.max(0, lineCount - 1)));
 }
 
 function integer(value: unknown, fallback: number, max: number): number {

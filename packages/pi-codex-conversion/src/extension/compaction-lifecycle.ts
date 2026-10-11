@@ -21,6 +21,8 @@ export function createCodexCompactionLifecycle(
 
 	return {
 		beforeCompact: async (event, ctx) => {
+			// Notes may load after PCC. Yield before any provider work, not after its hook cancels.
+			if (state.externalNotes?.owner.allowsCompaction?.(event.reason) === false) return undefined;
 			if (!state.externalNotes && state.contextTree.handoff.active) return { cancel: true };
 			// Summaries can share the model/session routing; keep the live checkpoint.
 			runtime.finishTurn();

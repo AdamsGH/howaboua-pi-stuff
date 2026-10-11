@@ -108,7 +108,7 @@ export function registerAgentController(
 	registerContextBriefing(
 		pi,
 		"active agents",
-		() => fleet.list().some((agent) => agent.activity.phase !== "settled"),
+		() => fleet.list().length > 0,
 		async (ctx, windowId) => {
 			if (!hasContextRollover(ctx)) return;
 			const key = JSON.stringify([

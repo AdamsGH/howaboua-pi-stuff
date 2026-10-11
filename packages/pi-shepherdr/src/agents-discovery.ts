@@ -45,24 +45,25 @@ export async function agentsHelp(
 			attach: "target context board machine?",
 			detach: "target context board machine?",
 			read: "target machine? source? lines?",
-			answer: "target ask_id answers machine?",
+			reply: "target extension id message machine?",
 		},
 		rules: {
+			reply:
+				"Use the extension-authored template from its report/read; send does not resolve it. Blocking messages wait for resumed work; other replies return after semantic delivery",
 			machine:
 				"Omit for local (host running Pi); list/find omit for all machines. Remote: profile ID from list, not label/hostname",
 			target:
 				"Use spawn/find target exactly; /root selects this family's live root",
-			label: "2-3 words; tab/session",
+			label: "Concise tab/session name",
 			...(boardAvailable
 				? {
 						board_thread_id:
 							"Existing shared-board thread; child receives a read reference",
 					}
 				: {}),
-			answers: "[{selections?:string[],other?:string,comment?:string}]",
-			ask_id: "Exact pending Ask ID",
-			send: "Only needed input or work changes; wakes idle agents, no wait/watch. Close finished workers with /quit, not acknowledgement messages",
-			assign: "Delegate a task to an existing agent",
+			send: "Message or work update; wakes idle agents, no wait/watch. Close finished workers with /quit, not acknowledgement messages",
+			assign:
+				"Delegate or update work; active updates share its pending result, never replace an existing wait",
 			focus:
 				"Select a running session; passive arrival with return call, no task/watch. voice defaults false; true carries the active microphone asynchronously. handoff adds context. Remote focus selects the target's Herdr session, not the client's machine",
 			attach: boardAvailable

@@ -1,29 +1,35 @@
-This repo publishes through Changesets; every merge to `main` feeds the version and npm publish workflow.
+Merges to main feed Changesets versioning and npm publishing.
 
-- Resolve package names by matching their words against immediate subdirectories of packages; search the unique match first and follow direct references only.
-- Keep the vendored `src/codex-runtime` trees in pi-codex-web-run and pi-codex-imagegen identical; do not publish a shared runtime package.
-- Agent-facing text is behavior: keep tool contracts, skill files, prompt metadata, and subagent prompts compact. Default to general-purpose assistance; scope coding assumptions to coding-specific tasks.
-- Keep extension internals out of agent-facing prompts, descriptions, and tool returns, including errors. State what happened, what remains available, and a useful next action the agent can actually perform. Account and configuration decisions belong to users. Success may reveal a newly available action; never invent generic workflow instructions.
-- Design for cache safety: keep the static prefix small and stable, defer non-essential tools through Code/Notebook, and keep capability discovery visible. Supply tool-specific guidance on demand through supported mid-session messages or results, not prefix edits.
-- Extend existing tools instead of adding overlapping choices. Help-backed tools default to discovery with no arguments (`{}` in structured mode); keep explicit help supported and visible. Disclose current arguments on demand. Preserve familiar contracts and omit self-explanatory field descriptions.
-- Measure package-emitted tool schemas and system-prompt deltas for cache impact; repository `AGENTS.md` is internal, not product prompt cost.
-- Do not repeat self-evident contracts across names, descriptions, schemas, `promptSnippet`, or `promptGuidelines`; use the latter two only for concrete failures. Never rewrite prior tool calls/results to integrate a tool.
-- Agent-facing prose need not perform grammatical polish; optimize semantic signal per token and omit cosmetic punctuation when it saves tokens. Preserve syntax, structural delimiters, meaning, evidence, caveats, and recovery instructions.
-- Keep the absolute minimum of permanent unit/regression tests. Delete by default; a survivor must guard a consequential failure that static checks and a focused change-time probe cannot adequately catch. A contract label alone does not justify retention.
-- Put non-obvious editing hazards and fragile ownership/order constraints in the nearest `AGENTS.md`, not regression suites. Distill the constraint; do not translate deleted assertions into prose inventories. Guidance directs edits, not runtime enforcement; keep validation in the owning code.
-- Review against actual supported workflows. Identify who triggers the failure and how execution reaches it. A possible interleaving or synthetic reproducer alone does not establish practical exposure.
-- Weigh consequence and realistic exposure against correction complexity. Rare but severe failures can warrant fixes; hypothetical edge cases do not automatically justify coordination, recovery, or compatibility machinery.
-- Respect explicit product tradeoffs. Do not present optional capabilities as defects or escalate severity using unsupported worst-case assumptions.
-- When review questions test scope, cull first. Use disposable probes for change-time evidence; never add permanent tests unless the user explicitly requests more coverage.
-- Never encode agent tool-call mistakes or prompt-following failures as programmatic tests. Discover them in real use and fix the model-facing contract; tests may cover only deterministic parser, executor, result, or routing boundaries independently of model compliance.
-- Skills and extensions must work for any user. Never ship local paths, personal names, machine assumptions, or private workflow details.
-- Treat `before_agent_start` as the critical preparation boundary for Pi integration: trace whether each kickoff actually runs the complete extension chain before prompt/tool rewrites and prewarm. Custom/developer-message turns and in-run steering bypass it; a user-message kickoff must enter while settled. Never replace other extensions' preparation with a captured-prompt patch. Code/Notebook nested tools live outside provider JSON schemas, so callable tools do not prove their prompt contracts survived; verify final instructions and native tool schemas separately.
-- Slash commands are for users; agents use tools. Prefer one routed entry command over several command names unless explicitly requested.
-- Amend only tiny, immediate, behavior-preserving corrections to the latest unpublished commit. Record behavior changes, revised approaches, and later fixes in new commits to preserve traceability.
-- Treat related package work from one session as one release unit: one PR or one directly, atomically merged stack. Installed users should not absorb serial cleanup releases.
-- Changed published behavior or payload requires a changeset; dependency-only updates, ordinary docs, and tests do not. Use concrete release language; never write “upcoming release”, “unreleased”, or speculative notes.
-- Changesets are published changelogs, not progress logs. Describe only the net user-facing change from the last release; omit implementation details, review history, and fixes to intermediate versions of the same PR. Lead with one concise outcome; use short capability bullets for broad releases.
-- Before new work on `dev`, check whether its previous `dev` → `main` PR merged. If so, use the retained `repoDance` binding for alignment, not an ad hoc reset. Preserve dirty files and unpublished commits; a blocked dance is not permission to discard them. Never merge `main` into `dev`.
-- `bun run check:changed` selects committed branch changes, not working edits; use focused package checks while editing. Prefer patch-autodetecting `bun changeset -- "summary"`; use `bun changeset:raw` only for intentional non-patch bumps.
-- After behavior-preserving module splits, run `bun refactor:compare --base <pre-refactor> --entry <old path> --probe <ESM>`; the probe calls old and replacement modules with identical inputs, asserts normalized outputs, and expands until no reachable old-side paths remain unexplained. Coverage is traversal, not proof; retain probes only for durable independent contracts.
-- Do not bump aggregate package versions or add their changesets manually; CI runs `bun run changeset:aggregates`.
+We use this toolkit. If tools fail or cause friction, propose concrete fixes. Apply tiny, low-risk fixes without derailing the task. Edit owning source, never installed tooling. Validate and report changes. Source edits do not update running packages.
+Resolve package names against immediate packages subdirectories. Search the unique word match first, then follow direct references.
+Keep pi-codex-web-run and pi-codex-imagegen src/codex-runtime trees identical. Do not publish a shared runtime package.
+
+Agent-facing text is behaviour. Keep contracts, skills, prompt metadata and subagent prompts compact. Default to general-purpose assistance. Scope coding assumptions to coding tasks.
+Hide extension internals from agent-facing text, including errors. State what happened, what remains available and an actionable next step. Users own account and configuration decisions. Success may expose a new action, not invented workflow advice.
+Keep the static prefix small and stable. Defer nonessential tools through Code/Notebook while preserving discovery. Deliver tool guidance on demand through supported mid-session messages or results, not prefix edits.
+Mid-session harness updates stay chronological: developer role if supported, user otherwise—never folded into the initial system prompt as Pi’s fallback does.
+Extend existing tools, not overlapping choices. Help-backed tools default to no-argument discovery, {} in structured mode. Keep explicit help visible and disclose current arguments on demand. Preserve familiar contracts. Omit obvious field descriptions.
+Do not repeat obvious contracts across names, descriptions, schemas, promptSnippet and promptGuidelines. Use the latter two only for concrete failures. Never rewrite prior tool calls or results to integrate a tool.
+Measure emitted tool schemas and system-prompt deltas for cache impact. Repository AGENTS.md is internal guidance, not product prompt cost.
+Prefer semantic signal over grammatical polish. Drop cosmetic punctuation only if syntax, delimiters, meaning, evidence, caveats and recovery survive.
+Skills and extensions must work for any user. Never ship personal names, local paths, machine assumptions or private workflows.
+
+Delete permanent tests by default. Retain only consequential failure coverage that static checks and disposable probes cannot adequately provide. Contract labels do not justify retention. Add permanent tests only when the user explicitly requests more coverage.
+If agents misuse tools or ignore prompts, fix the model-facing contract from real-use evidence, not programmatic tests. Tests may cover deterministic parser, executor, result and routing boundaries.
+Put editing hazards and fragile ownership/order constraints in the nearest AGENTS.md, not regression suites. Distil constraints, not inventories of deleted assertions. Keep runtime validation in owning code.
+Review supported workflows: who triggers the failure, and how does execution reach it? A synthetic reproducer or possible interleaving alone does not prove exposure.
+Weigh consequence and exposure against fix complexity. Rare severe failures may warrant fixes. Hypotheticals alone do not justify coordination, recovery or compatibility machinery.
+Respect product tradeoffs. Optional capabilities are not defects. Do not inflate severity with unsupported worst cases. If a review questions scope, cull first.
+
+Trace each kickoff through the complete before_agent_start chain before prompt/tool rewrites and prewarm. Custom/developer-message turns and in-run steering bypass it. User-message kickoffs must enter settled. Never substitute captured-prompt patches for other extensions' preparation.
+Code/Notebook nested tools sit outside provider JSON schemas. Callable tools do not prove their prompt contracts survived. Verify final instructions and native schemas separately.
+Slash commands are for users, tools for agents. Prefer one routed entry command unless explicitly asked for several.
+
+Amend only tiny, immediate, behaviour-preserving corrections to the latest unpublished commit. Put behaviour changes, revised approaches and later fixes in new commits.
+Release related session work together: one PR or an atomically merged stack, not serial cleanup releases.
+If published behaviour or payload changes, add a changeset. Dependency-only changes, ordinary docs and tests need none.
+Changesets describe net user-facing changes since the last release. Omit implementation details, review history and intermediate fixes. Lead with one concise outcome, then capability bullets if needed. Never write "upcoming release", "unreleased" or speculative notes.
+Work on dev in the existing checkout; other branches or worktrees require Igor's explicit request. Check the branch before editing. Before new work on dev, check whether its previous dev → main PR merged. If yes, align with retained repoDance, never an ad hoc reset. Preserve dirty files and unpublished commits even if alignment blocks. Never merge main into dev.
+While editing, use focused package checks. bun run check:changed selects committed branch changes, not working edits. Prefer bun changeset -- "summary". Use bun changeset:raw only for intentional non-patch bumps.
+After behaviour-preserving module splits, run bun refactor:compare --base <pre-refactor> --entry <old path> --probe <ESM>. Probe old and replacement modules with identical inputs, assert normalised outputs and explain every reachable old-side path. Coverage is traversal, not proof. Retain probes only for durable independent contracts.
+Never manually bump aggregate versions or add their changesets. CI runs bun run changeset:aggregates.

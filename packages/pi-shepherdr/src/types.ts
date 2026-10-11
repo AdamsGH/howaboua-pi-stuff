@@ -7,6 +7,7 @@ export interface PeerMessage {
 }
 
 export interface PeerDelivery {
+	result?: string;
 	command: boolean;
 	commands?: PeerCommand[];
 }
@@ -103,11 +104,12 @@ export interface SessionSnapshot {
 }
 
 export interface MonitoredAgent {
+	readonly instructions?: string;
 	readonly scope: "task" | "persistent";
 	readonly activity: AgentActivity;
 	readonly cwd?: string;
 	readonly lastAssistantId?: string;
-	readonly lastQuestionId?: string;
+	readonly notifiedExtensionMessages?: string[];
 	readonly name?: string;
 	readonly paneId: string;
 	readonly tabId: string;
@@ -148,26 +150,22 @@ export interface LatestInput {
 	text: string;
 }
 
-export interface PendingAsk {
-	delivery?: "steer";
-	handoff: boolean;
-	prompts: Array<{
-		body?: string;
-		choices: Array<{ description?: string; label: string }>;
-		multiple: boolean;
-		title: string;
-	}>;
-	toolCallId: string;
+export interface ExtensionMessage {
+	extension: string;
+	id: string;
+	message: string;
+	reply?: string;
+	blocking: boolean;
 }
 
-export interface AskResult {
-	responses?: Array<{ comment?: string; id: string; selections: string[] }>;
-	status: "accepted" | "rejected" | "unknown";
+export interface ExtensionReply {
+	extension: string;
+	id: string;
+	message: string;
 }
 
 export interface SessionView {
-	ask?: PendingAsk;
-	askResults?: Record<string, AskResult>;
+	extensionMessages?: ExtensionMessage[];
 	assistant?: LatestAssistant;
 	assistantAfterInput?: boolean;
 	input?: LatestInput;
