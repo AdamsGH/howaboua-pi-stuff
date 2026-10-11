@@ -2,4 +2,7 @@
 "@howaboua/pi-ask": patch
 ---
 
-Ask now rejects unknown or misnamed fields, such as `options` in place of `choices`, with an error naming the field and the accepted shape. Previously the input was silently dropped, so a question could appear without its choices.
+Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers.
+
+- Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation.
+- Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.

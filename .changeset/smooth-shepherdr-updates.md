@@ -1,11 +1,11 @@
 ---
 "@howaboua/pi-shepherdr": patch
-"@howaboua/pi-ask": patch
 ---
 
-Shepherdr now updates running agents without losing their pending results and retains supervised workers and follow-up instructions after context rollover.
+Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers.
 
-- Messages and assignments now reach blocked workers.
-- Extension-authored messages and reply templates now travel across local and remote agents. Pending messages remain visible until their producer closes them, and replies go directly to that extension.
-- `reply` replaces the Ask-specific `answer` action. Supervisors can answer worker questions using their forwarded choices and reply template, completing the existing Ask panel. Human handoffs still require the user's confirmation. Update and reload Ask and Shepherdr together on controllers and workers.
+- Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers.
+- Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked.
+- Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once.
+- Context rollover now retains supervised workers and their full follow-up instructions.
 - Spawn labels no longer have a word-count restriction.

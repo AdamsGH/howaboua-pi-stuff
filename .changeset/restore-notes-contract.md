@@ -2,7 +2,7 @@
 "@howaboua/pi-notes-compaction": patch
 ---
 
-Restore PCC-compatible note queries and predictable manual context rollover.
+Fixed note queries and manual context rollover with Codex Conversion.
 
-- Restore negative line ranges, default limits, ordering, metadata and complete read/search content. Show concrete call syntax in help and identify invalid arguments before execution.
-- Honour the Normal compaction setting for `/compact` with PCC. With it off, reuse fresh saved notes or request a checkpoint, then open a new window without starting a continuation turn.
+- Restored negative line ranges, default limits, result ordering, metadata and complete read and search content. Help now shows concrete call syntax, and invalid arguments are reported before execution.
+- `/compact` now honours the Normal compaction setting. With it off, Notes Compaction reuses fresh saved notes or requests a checkpoint, then opens a new context window without starting a continuation turn.
