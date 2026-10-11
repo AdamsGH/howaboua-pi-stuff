@@ -152,6 +152,8 @@ export class MonitorExtensionMessages {
 						messages.map(extensionMessageKey),
 					);
 					for (const message of messages) {
+						// Blocking messages arrive with the worker's settlement.
+						if (message.blocking) continue;
 						const key = extensionMessageKey(message);
 						if (record.notifiedExtensionMessages?.includes(key)) continue;
 						this.options.notify(this.context, record, current, message);
