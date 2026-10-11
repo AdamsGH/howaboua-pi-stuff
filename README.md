@@ -78,12 +78,6 @@ These packages are no longer maintained or published. Their source remains avail
 - [`pi-memories`](./packages/pi-memories): shutdown memory distillation.
 - [`pi-semantic-grep`](./packages/pi-semantic-grep): embedding-based indexing and search.
 
-## How I use it
-
-Map an unfamiliar repo, set `/marker` once the useful context is in place, implement one coherent change, and run `/review`. After triage and QA, `/end` carries the accepted result forward. Broad changes get a codebase-hygiene pass.
-
-For UI work, I give the agent references first—apps, screenshots, and interface details I like—then iterate through browser inspection and screenshots. One-shotting a good frontend is mostly a party trick.
-
 ## Build an integration
 
 The [extension API guide](./docs/extension-apis.md) covers Board and Notes with other subagent extensions, PCC tool and context APIs, voice tools, and browser miniapps. It includes lifecycle diagrams, public contracts and small integration examples.
