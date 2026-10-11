@@ -43,6 +43,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 			lifecycle.windows.current ? { ...lifecycle.windows.current } : undefined,
 		projectMessages: (messages) => lifecycle.windows.projectMessages(messages),
 		projectBranch: (entries) => lifecycle.windows.projectBranch(entries),
+		allowsCompaction: (reason) => lifecycle.allowsCompaction(reason),
 		canBind: (ctx) =>
 			lifecycle.active &&
 			ctx.isIdle() &&

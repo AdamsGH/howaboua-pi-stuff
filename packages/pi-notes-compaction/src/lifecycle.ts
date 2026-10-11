@@ -357,11 +357,7 @@ export class NotesLifecycle {
 		event: SessionBeforeCompactEvent,
 		ctx: ExtensionContext,
 	): { cancel: true } | undefined {
-		if (
-			this.normalCompaction ||
-			this.rollover?.phase === "compacting" ||
-			event.reason === "overflow"
-		) {
+		if (this.allowsCompaction(event.reason)) {
 			// PCC owns preparation when bridged, including native checkpoint routes.
 			if (this.bridge) return;
 			try {
@@ -435,6 +431,13 @@ export class NotesLifecycle {
 			};
 		return { cancel: true };
 	}
+	allowsCompaction(reason: SessionBeforeCompactEvent["reason"]): boolean {
+		return (
+			this.normalCompaction ||
+			this.rollover?.phase === "compacting" ||
+			reason === "overflow"
+		);
+	}
 	async compactFailed(
 		event: SessionCompactFailedEvent,
 		ctx: ExtensionContext,
@@ -450,7 +453,7 @@ export class NotesLifecycle {
 		)
 			return;
 		if (!pending.instructions?.trim() && this.fresh(ctx))
-			await this.roll(ctx, true);
+			await this.roll(ctx, false);
 		else this.startCheckpoint(ctx, pending.instructions);
 	}
 	async settled(
@@ -517,7 +520,7 @@ export class NotesLifecycle {
 				);
 				return;
 			}
-			await this.roll(ctx, true);
+			await this.roll(ctx, false);
 			return;
 		}
 		if (this.held?.phase === "draining") {

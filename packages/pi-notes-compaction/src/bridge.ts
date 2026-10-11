@@ -3,6 +3,7 @@ import type {
 	AgentToolResult,
 	ExtensionAPI,
 	ExtensionContext,
+	SessionBeforeCompactEvent,
 	SessionEntry,
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -68,6 +69,8 @@ export interface NotesOwner {
 	identity(ctx: ExtensionContext): WindowIdentity | undefined;
 	projectMessages(messages: readonly AgentMessage[]): AgentMessage[];
 	projectBranch(entries: readonly SessionEntry[]): SessionEntry[];
+	/** Consult before compaction work; the owner's hook performs notes-only rollover. */
+	allowsCompaction?(reason: SessionBeforeCompactEvent["reason"]): boolean;
 	canBind?(ctx: ExtensionContext): boolean;
 	snapshotNotes?(
 		entries: readonly SessionEntry[],

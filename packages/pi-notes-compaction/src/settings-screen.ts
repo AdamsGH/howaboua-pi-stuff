@@ -27,7 +27,7 @@ export async function openNotesSettings(
 							id: "compact",
 							label: "Normal compaction",
 							description:
-								"Include the installed Pi/PCC compaction flow on new_context. Off keeps notes-only rollover.",
+								"Use Pi/PCC compaction for /compact and new_context. Off uses notes-only rollover; /compact then waits for your next prompt.",
 							currentValue: settings.normalCompaction ? "on" : "off",
 							values: ["off", "on"],
 						},

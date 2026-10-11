@@ -20,7 +20,9 @@ The agent keeps the familiar `notes`, `history`, `new_context` and `get_context_
 
 By default, `new_context` starts a fresh window without generating a summary. The agent receives recent note paths, and Pi's saved history remains available for lookup.
 
-Reminders arrive at 85% and 90% context use. `/compact` requests a notes checkpoint and opens a new window only after a completed run with fresh saved notes. Abort, errors and failed writes retain the old context. Overflow recovery still uses Pi's normal compaction.
+Reminders arrive at 85% and 90% context use. With normal compaction off, `/compact` opens a fresh window immediately if the latest completed turn saved fresh notes. Otherwise it requests a checkpoint first. The new window waits for your next prompt; it does not start a continuation turn. Abort, errors and failed writes retain the old context. Overflow recovery still uses Pi's normal compaction.
+
+Pi rejects `/compact` when there is too little history to prepare compaction, before extensions run. In that case, the agent can still use `new_context`.
 
 Idle rollover is off by default. Choose 5, 15, 25 or 55 minutes in `/notes`. After that interval, the next input waits for rollover only if the latest completed turn saved fresh notes. Otherwise it proceeds in the current window without requesting a checkpoint. These intervals are user preferences, not provider cache-expiry guarantees. Held input retains its original text, attachments and SDK options. A failed rollover keeps input pending. Submit another prompt to retry, or reload to cancel it.
 
@@ -28,7 +30,7 @@ Idle rollover is off by default. Choose 5, 15, 25 or 55 minutes in `/notes`. Aft
 
 `/notes` opens the settings panel in interactive Pi. It shows continuity status, storage counts and remote capabilities. Changes save immediately.
 
-- **Normal compaction** includes the installed Pi or PCC compaction flow on `new_context`. Off keeps notes-only rollover, the default.
+- **Normal compaction** uses the installed Pi or PCC compaction flow for `/compact` and `new_context`. Off keeps notes-only rollover, the default.
 - **Idle rollover** selects the interval or disables it.
 - **Prune missing sessions** removes records for missing session files after confirmation. Unknown paths, permission errors and the active session are retained.
 
