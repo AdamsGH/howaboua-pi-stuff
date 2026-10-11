@@ -33,10 +33,12 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-agent-board/CHANGELOG.md)
 
-### @howaboua/pi-ask — 0.0.12
+### @howaboua/pi-ask — 0.0.13
 
-- ### Improvements
-  - Ask returns help when called without arguments, including an empty structured object. Explicit help remains supported.
+- Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers.
+
+  - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation.
+  - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
 
 [Full changelog](./packages/pi-ask/CHANGELOG.md)
 
@@ -86,9 +88,9 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-chatgpt-sites/CHANGELOG.md)
 
-### @howaboua/pi-codex-conversion — 3.0.49
+### @howaboua/pi-codex-conversion — 3.0.50
 
-- Fixed shared subagent context after switching an existing Remote session to Notes Compaction, preserving encrypted historical lookup.
+- Fixed `/compact` starting an unwanted summary request when Notes Compaction's Normal compaction setting is off. Codex Conversion now honours that setting before starting compaction.
 
 [Full changelog](./packages/pi-codex-conversion/CHANGELOG.md)
 
@@ -128,11 +130,12 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-explore-subagents/CHANGELOG.md)
 
-### @howaboua/pi-extensions — 0.0.92
+### @howaboua/pi-extensions — 0.0.93
 
 - Include bundled package updates:
 
-  - @howaboua/pi-better-skills-tool: Skills discovery and invalid-input errors now show the JavaScript string-call syntax.
+  - @howaboua/pi-ask: Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers. - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation. - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
+  - @howaboua/pi-shepherdr: Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers. - Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers. - Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked. - Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once. - Context rollover now retains supervised workers and their full follow-up instructions. - Spawn labels no longer have a word-count restriction.
 
 [Full changelog](./packages/pi-extensions/CHANGELOG.md)
 
@@ -178,9 +181,12 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-memories/CHANGELOG.md)
 
-### @howaboua/pi-notes-compaction — 0.0.3
+### @howaboua/pi-notes-compaction — 0.0.4
 
-- Fixed shared agent startup after package updates when the startup changelog is present.
+- Fixed note queries and manual context rollover with Codex Conversion.
+
+  - Restored negative line ranges, default limits, result ordering, metadata and complete read and search content. Help now shows concrete call syntax, and invalid arguments are reported before execution.
+  - `/compact` now honours the Normal compaction setting. With it off, Notes Compaction reuses fresh saved notes or requests a checkpoint, then opens a new context window without starting a continuation turn.
 
 [Full changelog](./packages/pi-notes-compaction/CHANGELOG.md)
 
@@ -202,9 +208,15 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-semantic-grep/CHANGELOG.md)
 
-### @howaboua/pi-shepherdr — 0.2.17
+### @howaboua/pi-shepherdr — 0.2.18
 
-- Added slash-command discovery with configured descriptions for the current session or another agent, without executing commands or interrupting its work.
+- Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers.
+
+  - Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers.
+  - Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked.
+  - Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once.
+  - Context rollover now retains supervised workers and their full follow-up instructions.
+  - Spawn labels no longer have a word-count restriction.
 
 [Full changelog](./packages/pi-shepherdr/CHANGELOG.md)
 
@@ -260,11 +272,12 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-smart-btw/CHANGELOG.md)
 
-### @howaboua/pi-stuff — 0.0.100
+### @howaboua/pi-stuff — 0.0.101
 
 - Include bundled package updates:
 
-  - @howaboua/pi-better-skills-tool: Skills discovery and invalid-input errors now show the JavaScript string-call syntax.
+  - @howaboua/pi-ask: Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers. - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation. - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
+  - @howaboua/pi-shepherdr: Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers. - Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers. - Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked. - Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once. - Context rollover now retains supervised workers and their full follow-up instructions. - Spawn labels no longer have a word-count restriction.
 
 [Full changelog](./packages/pi-stuff/CHANGELOG.md)
 
