@@ -1,7 +1,5 @@
 # Howaboua Pi Stuff
 
-[![GitHub stars](https://img.shields.io/github/stars/IgorWarzocha/howaboua-pi-stuff?style=flat)](https://github.com/IgorWarzocha/howaboua-pi-stuff/stargazers)
-
 The Pi extensions and skills I use to keep long agent sessions useful without building a fake operating system around them.
 
 Everything is published as a separate npm package. Install a bundle for the full setup, or pick only what you need. Revolutionary stuff. A table.
@@ -89,3 +87,5 @@ See [CHANGELOG.md](./CHANGELOG.md). Package-level changelogs remain beside packa
 ## License
 
 Individual packages include their own license files. They are MIT-licensed unless noted in the package directory.
+
+[![Star history](https://api.star-history.com/svg?repos=IgorWarzocha/howaboua-pi-stuff&type=Date)](https://star-history.com/#IgorWarzocha/howaboua-pi-stuff&Date)
