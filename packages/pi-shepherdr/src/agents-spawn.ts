@@ -30,15 +30,6 @@ import {
 } from "./profiles.js";
 import type { SharedAgentContext } from "./shared-context.js";
 
-function agentLabel(value: string | undefined): string {
-	const label = required(value, "label");
-	const words = label.split(/\s+/u);
-	if (words.length < 2 || words.length > 3) {
-		throw new Error("label must contain 2 or 3 words");
-	}
-	return label;
-}
-
 export async function spawnAgent(
 	fleet: AgentFleet,
 	runtime: ConnectedMachine,
@@ -73,7 +64,7 @@ export async function spawnAgent(
 			`unknown agent_type ${JSON.stringify(profileName)}; available: ${[...profiles.keys()].join(", ")}`,
 		);
 	}
-	const label = agentLabel(params.label);
+	const label = required(params.label, "label");
 	const name = params.name?.trim() || (await allocateAgentName(runtime, label));
 	const placement =
 		params.placement ??

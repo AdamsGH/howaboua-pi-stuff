@@ -17,7 +17,7 @@ import type {
 	SessionView,
 } from "./types.js";
 
-const BRIDGE_VERSION = 19;
+const BRIDGE_VERSION = 20;
 const REMOTE_HELPER = "~/.pi/agent/shepherdr.mjs";
 const REMOTE_PEER_HELPER = "~/.pi/agent/shepherdr-peer.mjs";
 const REMOTE_CHANNEL_HELPER = "~/.pi/agent/shepherdr-channel.mjs";
@@ -308,6 +308,21 @@ export class RemoteHerdrClient implements HerdrConnection, AssistantReader {
 				"Shared context relay is unavailable; open /herdr → Status to retry",
 			);
 		return this.relayPath;
+	}
+
+	async replyExtension(
+		agent: PaneInfo,
+		reply: import("./types.js").ExtensionReply,
+	): Promise<string> {
+		const result = await this.call(
+			{ op: "extension-reply", agent, reply },
+			60_000,
+		);
+		if (typeof result !== "string")
+			throw new Error(
+				"Invalid extension reply receipt; inspect the target before retrying",
+			);
+		return result;
 	}
 
 	async commands(agent: PaneInfo): Promise<import("./types.js").PeerCommand[]> {

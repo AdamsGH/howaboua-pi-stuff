@@ -11,13 +11,14 @@ import {
 } from "./shepherdr-context.mjs";
 import {
 	sendPeerCommands,
+	sendPeerExtensionReply,
 	sendPeerFocus,
 	sendPeerMessage,
 } from "./shepherdr-peer.mjs";
 import { readSessionView } from "./shepherdr-session.mjs";
 import { watchSessions } from "./shepherdr-session-watch.mjs";
 
-const BRIDGE_VERSION = 19;
+const BRIDGE_VERSION = 20;
 const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 const subscriptions = new Map();
 const contextRelays = new Map();
@@ -327,6 +328,8 @@ async function handle(message) {
 	if (message.op === "message") {
 		return sendPeerMessage(request, message.agent, message.message);
 	}
+	if (message.op === "extension-reply")
+		return sendPeerExtensionReply(request, message.agent, message.reply);
 	if (message.op === "identity") {
 		return { host: hostname(), session: argument("session") || "default" };
 	}

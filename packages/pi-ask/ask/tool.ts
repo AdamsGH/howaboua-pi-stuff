@@ -34,13 +34,13 @@ export function createAskRuntime({
 	deliverSteer,
 	onBlockedChange,
 	onPendingChange,
-	onSteerActiveChange,
+	onRequestChange,
 }: AskToolOptions = {}) {
 	const coordinator = createAskCoordinator({
 		...(askInComposer ? { askInComposer } : {}),
 		...(deliverSteer ? { deliverSteer } : {}),
 		...(onPendingChange ? { onPendingChange } : {}),
-		...(onSteerActiveChange ? { onSteerActiveChange } : {}),
+		...(onRequestChange ? { onRequestChange } : {}),
 	});
 
 	const tool = defineTool({
@@ -104,12 +104,20 @@ export function createAskRuntime({
 			const presentationSignal = signal
 				? AbortSignal.any([signal, coordinator.sessionSignal])
 				: coordinator.sessionSignal;
-			const rawResponses = await coordinator.present(ctx, prompts, {
-				handoff,
-				signal: presentationSignal,
-				onActiveChange: (active) =>
-					onBlockedChange?.({ ...blockedState, active }),
-			});
+			let rawResponses: unknown;
+			try {
+				rawResponses = await coordinator.present(ctx, prompts, {
+					id: toolCallId,
+					handoff,
+					signal: presentationSignal,
+					onActiveChange: (active) =>
+						onBlockedChange?.({ ...blockedState, active }),
+				});
+				coordinator.complete(toolCallId);
+			} catch (error) {
+				coordinator.complete(toolCallId, String(error));
+				throw error;
+			}
 			const responses = normalizeResponses(prompts, rawResponses);
 			if (!responses) {
 				return {
@@ -156,6 +164,7 @@ export function createAskRuntime({
 
 	return {
 		tool,
+		reply: coordinator.reply,
 		restorePending: coordinator.restorePending,
 		shutdown: coordinator.shutdown,
 	};

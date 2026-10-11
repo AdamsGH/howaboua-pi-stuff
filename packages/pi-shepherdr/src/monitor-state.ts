@@ -81,10 +81,30 @@ export class MonitorState {
 		return this.agents.get(terminalId);
 	}
 
-	markQuestion(terminalId: string, id: string): boolean {
+	markExtensionMessage(terminalId: string, id: string): boolean {
 		const record = this.byTerminal(terminalId);
-		if (!record || record.lastQuestionId === id) return false;
-		this.agents.set(terminalId, { ...record, lastQuestionId: id });
+		if (!record || record.notifiedExtensionMessages?.includes(id)) return false;
+		this.agents.set(terminalId, {
+			...record,
+			notifiedExtensionMessages: [
+				...(record.notifiedExtensionMessages ?? []),
+				id,
+			],
+		});
+		return true;
+	}
+	retainExtensionNotifications(terminalId: string, live: string[]): boolean {
+		const record = this.byTerminal(terminalId);
+		if (!record?.notifiedExtensionMessages) return false;
+		const retained = record.notifiedExtensionMessages.filter((id) =>
+			live.includes(id),
+		);
+		if (retained.length === record.notifiedExtensionMessages.length)
+			return false;
+		this.agents.set(terminalId, {
+			...record,
+			notifiedExtensionMessages: retained,
+		});
 		return true;
 	}
 
@@ -102,15 +122,20 @@ export class MonitorState {
 		const activity = reportCurrent
 			? ({ attemptId: randomUUID(), phase: "working" } as const)
 			: (existing?.activity ?? activityForPanel(panel));
-		const record = recordForPanel(
-			panel,
-			activity,
-			reportSettled ? "persistent" : (existing?.scope ?? "task"),
-			reportCurrent
-				? undefined
-				: (existing?.lastAssistantId ?? lastAssistantId),
-			existing?.lastQuestionId,
-		);
+		const record = {
+			...(existing?.instructions
+				? { instructions: existing.instructions }
+				: {}),
+			...recordForPanel(
+				panel,
+				activity,
+				reportSettled ? "persistent" : (existing?.scope ?? "task"),
+				reportCurrent
+					? undefined
+					: (existing?.lastAssistantId ?? lastAssistantId),
+				existing?.notifiedExtensionMessages,
+			),
+		};
 		if (existing && existing.terminalId !== record.terminalId) {
 			this.agents.delete(existing.terminalId);
 		}
@@ -136,11 +161,11 @@ export class MonitorState {
 				`prompt submission to ${record.name ?? paneId} is still unresolved`,
 			);
 		}
-		if (record.activity.phase === "working" && record.activity.task) {
-			throw new Error("Agent already has delegated work; use send for updates");
-		}
 		const attempt = {
-			attemptId: randomUUID(),
+			attemptId:
+				record.activity.phase === "working"
+					? (record.activity.attemptId ?? randomUUID())
+					: randomUUID(),
 			terminalId: record.terminalId,
 		};
 		this.pendingSubmissions.add(attempt.attemptId);
@@ -150,11 +175,23 @@ export class MonitorState {
 				attemptId: attempt.attemptId,
 				phase: "submitting",
 				previous: record.activity,
-				task,
+				task: activityTask(record.activity) ?? task,
 				...(expectedUserAfter !== undefined ? { expectedUserAfter } : {}),
 			},
 		});
 		return attempt;
+	}
+
+	noteMessage(paneId: string, message: string): boolean {
+		const record = this.byPane(paneId);
+		if (!record) return false;
+		const prior = record.instructions ?? activityTask(record.activity);
+		this.agents.set(record.terminalId, {
+			...record,
+			instructions:
+				prior && prior !== message ? `${prior}\n\n${message}` : message,
+		});
+		return true;
 	}
 
 	endSubmission(attempt: WorkAttempt | undefined): void {
@@ -351,13 +388,16 @@ export class MonitorState {
 				activity = { phase: "settled", status: panel.agent_status };
 			}
 
-			const updated = recordForPanel(
-				panel,
-				activity,
-				record.scope,
-				record.lastAssistantId,
-				record.lastQuestionId,
-			);
+			const updated = {
+				...(record.instructions ? { instructions: record.instructions } : {}),
+				...recordForPanel(
+					panel,
+					activity,
+					record.scope,
+					record.lastAssistantId,
+					record.notifiedExtensionMessages,
+				),
+			};
 			if (!sameMonitorRecord(record, updated)) changed = true;
 			if (record.terminalId !== updated.terminalId) {
 				this.agents.delete(record.terminalId);
@@ -390,7 +430,13 @@ export class MonitorState {
 		lastAssistantId?: string,
 	): boolean {
 		const record = this.byTerminal(terminalId);
-		if (!record || activityTask(record.activity) !== task) return false;
+		if (
+			!record ||
+			activityTask(record.activity) !== task ||
+			(record.activity.phase === "submitting" &&
+				this.pendingSubmissions.has(record.activity.attemptId))
+		)
+			return false;
 		this.agents.set(terminalId, {
 			...record,
 			scope: "persistent",

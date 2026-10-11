@@ -4,6 +4,7 @@ import { openPeerChannel } from "./remote/shepherdr-channel.mjs";
 import { requestContext } from "./remote/shepherdr-context.mjs";
 import {
 	sendPeerCommands,
+	sendPeerExtensionReply,
 	sendPeerFocus,
 	sendPeerMessage,
 } from "./remote/shepherdr-peer.mjs";
@@ -66,6 +67,10 @@ export function isHerdrErrorCode(error: unknown, code: string): boolean {
 }
 
 export interface HerdrConnection {
+	replyExtension(
+		agent: PaneInfo,
+		reply: import("./types.js").ExtensionReply,
+	): Promise<string>;
 	machineIdentity(): Promise<MachineIdentity>;
 	focus(agent: PaneInfo, request: FocusRequest): Promise<unknown>;
 	openFocusChannel(
@@ -91,6 +96,16 @@ export interface HerdrConnection {
 
 export class HerdrClient implements HerdrConnection {
 	readonly socketPath: string;
+	replyExtension(
+		agent: PaneInfo,
+		reply: import("./types.js").ExtensionReply,
+	): Promise<string> {
+		return sendPeerExtensionReply(
+			(method, params) => this.request(method, params),
+			agent,
+			reply,
+		);
+	}
 	openFocusChannel(
 		agent: PaneInfo,
 		request: FocusRequest,

@@ -7,6 +7,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { acceptFocus, readFocus } from "./agents-focus.js";
 import { sendPolicyMessage, startPreparedIdleTurn } from "./delivery.js";
+import { dispatchExtensionReply } from "./extension-reply.js";
 import type { AgentFleet } from "./fleet.js";
 import { getCurrentPane } from "./herdr.js";
 import { HerdrClient } from "./herdr-client.js";
@@ -118,10 +119,12 @@ async function openInbox(
 				(request["kind"] !== "focus" &&
 					request["kind"] !== "commands" &&
 					request["kind"] !== "message" &&
-					request["kind"] !== "channel") ||
+					request["kind"] !== "channel" &&
+					request["kind"] !== "extension-reply") ||
 				(request["kind"] !== "focus" &&
 					request["kind"] !== "commands" &&
 					request["kind"] !== "channel" &&
+					request["kind"] !== "extension-reply" &&
 					(typeof request["text"] !== "string" ||
 						!request["text"].trim() ||
 						typeof request["sender"] !== "string" ||
@@ -134,6 +137,42 @@ async function openInbox(
 					rejected: true,
 					error: "Peer delivery rejected: stale session or invalid request",
 				});
+				return;
+			}
+			if (request["kind"] === "extension-reply") {
+				const extension = request["extension"],
+					id = request["messageId"],
+					message = request["message"];
+				if (
+					typeof extension !== "string" ||
+					!extension.trim() ||
+					typeof id !== "string" ||
+					!id.trim() ||
+					typeof message !== "string"
+				) {
+					reply({
+						ok: false,
+						rejected: true,
+						error: "Extension reply requires extension, id and message strings",
+					});
+					return;
+				}
+				// No agent turn, UI automation or idle/busy restriction: the producer owns delivery.
+				socket.setTimeout(60_000, () => socket.destroy());
+				try {
+					const result = await dispatchExtensionReply(pi, {
+						extension,
+						id,
+						message,
+					});
+					reply({ ok: true, command: false, result });
+				} catch (error) {
+					reply({
+						ok: false,
+						rejected: false,
+						error: error instanceof Error ? error.message : String(error),
+					});
+				}
 				return;
 			}
 			if (request["kind"] === "commands") {
