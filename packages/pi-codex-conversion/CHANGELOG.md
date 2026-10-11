@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.50
+
+- Fixed `/compact` starting an unwanted summary request when Notes Compaction's Normal compaction setting is off. Codex Conversion now honours that setting before starting compaction.
+
 ## 3.0.49
 
 - Fixed shared subagent context after switching an existing Remote session to Notes Compaction, preserving encrypted historical lookup.
