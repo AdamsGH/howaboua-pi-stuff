@@ -179,10 +179,10 @@ export class AskRequests {
 			entry.selected = true;
 			entry.resolve(null);
 			entry.controller.abort();
-			entry.finish({
-				error:
-					"Session changed before the answer was delivered; read the agent's latest state",
-			});
+			this.complete(
+				entry.request.id,
+				"Session changed before the answer was delivered; read the agent's latest state",
+			);
 		}
 		this.requests.clear();
 	}

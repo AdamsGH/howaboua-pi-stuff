@@ -305,9 +305,12 @@ export class SettlementReporter {
 		}
 		this.reporting.set(key, request.status);
 		try {
+			const replyingTo = retryState.attemptId
+				? this.claims.get(retryState.attemptId)?.replyingTo
+				: undefined;
 			const settlement = await this.collector.collect(
 				request.record,
-				request.status === "blocked" ? "blocked" : undefined,
+				request.status === "blocked" && !replyingTo ? "blocked" : undefined,
 			);
 			if (!settlement || !lifecycle.isCurrent()) return;
 			if (this.pendingBlocked.has(key)) return;
@@ -332,20 +335,28 @@ export class SettlementReporter {
 			const retryRequest = task ? { ...request, task } : request;
 			const expectedUser = activityExpectedUser(current.activity);
 			const blocked = settlement.status === "blocked";
-			const replyingTo = retryState.attemptId
-				? this.claims.get(retryState.attemptId)?.replyingTo
-				: undefined;
-			// A blocked snapshot with the original pending message is not settlement of its reply.
-			if (
-				blocked &&
-				replyingTo &&
-				settlement.extensionMessages?.some(
-					(message) =>
-						message.extension === replyingTo.extension &&
-						message.id === replyingTo.id,
+			// Closing a message and publishing resumed status use separate transports.
+			if (blocked && replyingTo) {
+				if (
+					settlement.extensionMessages?.some(
+						(message) =>
+							message.extension === replyingTo.extension &&
+							message.id === replyingTo.id,
+					)
 				)
-			) {
-				return;
+					return;
+				if (
+					!settlement.extensionMessages?.some((message) => message.blocking)
+				) {
+					if (!this.retry(lifecycle, retryRequest, retryState)) {
+						this.failReconciliation(
+							lifecycle,
+							current,
+							"the worker remained blocked after its extension reply",
+						);
+					}
+					return;
+				}
 			}
 			// A blocked status is authoritative even when Pi has not persisted the turn.
 			// Pi persists expanded skills/templates, not the submitted command text.
