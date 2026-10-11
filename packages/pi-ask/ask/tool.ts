@@ -1,11 +1,13 @@
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { Check } from "typebox/value";
 import { AskParameters, type AskPrompt } from "./contracts.js";
 import {
 	type AskCoordinatorOptions,
 	createAskCoordinator,
 } from "./coordinator.js";
 import {
+	askInputProblem,
 	isAskHelpInput,
 	isSteeringAskInput,
 	normalizeAskInput,
@@ -49,6 +51,14 @@ export function createAskRuntime({
 		description: "Request user input or action; {} for help",
 		parameters: AskParameters,
 		executionMode: "sequential",
+		prepareArguments(input) {
+			const params = input === undefined ? {} : input;
+			const problem = askInputProblem(params);
+			if (problem) throw new Error(problem);
+			if (!Check(AskParameters, params))
+				throw new Error("Invalid ask arguments; ask({}) returns help");
+			return params;
+		},
 		async execute(toolCallId, params, signal, _onUpdate, ctx) {
 			if (isAskHelpInput(params)) {
 				return {
