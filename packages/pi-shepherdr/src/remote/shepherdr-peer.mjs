@@ -99,7 +99,6 @@ export async function sendPeerMessage(
 	const { descriptor, sessionFile, agent } = await resolvePeerReceiver(
 		request,
 		expected,
-		Boolean(focus) || commands,
 	);
 	const id = randomUUID();
 	const frame =
@@ -137,7 +136,6 @@ export async function sendPeerExtensionReply(request, expected, reply) {
 	const { descriptor, sessionFile, agent } = await resolvePeerReceiver(
 		request,
 		expected,
-		true,
 	);
 	const id = randomUUID();
 	const frame =
@@ -174,9 +172,8 @@ export async function sendPeerExtensionReply(request, expected, reply) {
 /**
  * @param {(method: string, params: object) => Promise<unknown>} request
  * @param {import("../types.js").PaneInfo} expected
- * @param {boolean} allowBlocked
  */
-export async function resolvePeerReceiver(request, expected, allowBlocked) {
+export async function resolvePeerReceiver(request, expected) {
 	const result = await request("agent.get", { target: expected.pane_id });
 	const agent =
 		result &&
@@ -208,16 +205,6 @@ export async function resolvePeerReceiver(request, expected, allowBlocked) {
 	) {
 		throw deliveryError(
 			"Target Pi session changed or is not ready; resolve the target again",
-			true,
-		);
-	}
-	if (
-		!allowBlocked &&
-		"agent_status" in agent &&
-		agent.agent_status === "blocked"
-	) {
-		throw deliveryError(
-			"Target is blocked; use agents reply for a pending extension message",
 			true,
 		);
 	}

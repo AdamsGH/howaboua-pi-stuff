@@ -162,11 +162,14 @@ export function createAskCoordinator({
 								? undefined
 								: "Answer delivered, but question state could not be saved; inspect the agent before retrying",
 						);
-					} else
+					} else {
 						requests.complete(
 							request.id,
-							"Answer could not be delivered; the question remains pending",
+							"Answer could not be delivered; the question is open again",
 						);
+						activeSteers.delete(request.id);
+						startSteer(request, ctx, false);
+					}
 				},
 				(error: unknown) => {
 					if (requestGeneration !== generation || sessionAbort.signal.aborted)

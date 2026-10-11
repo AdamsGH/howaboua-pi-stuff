@@ -160,7 +160,6 @@ export async function openPeerChannel(request, expected, focus) {
 	const { descriptor, sessionFile, agent } = await resolvePeerReceiver(
 		request,
 		expected,
-		true,
 	);
 	const id = randomUUID();
 	const frame = `${JSON.stringify({ protocol: PEER_PROTOCOL, kind: "channel", id, token: descriptor.token, sessionFile, terminalId: agent.terminal_id, focus })}\n`;
