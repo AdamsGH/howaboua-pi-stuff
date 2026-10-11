@@ -1,6 +1,6 @@
-- For a new folded notice, change the opt-in types in `activity.ts` and its projection in `activity-messages.ts` together. Unknown content must remain recoverable; never infer a successful result from an unfamiliar envelope.
-- For summary wording or density, start in `current-stage.ts`; for heading text, use `ActivityGroup.label`. Keep running, completed, failed and blocked evidence distinct. Nested tool evidence can replace an executor label, not invent activity it did not report.
-- For visual changes, use `renderers.ts` and `activity-messages.ts`. Fit at the current terminal width, preserve original renderer state and both levels of expansion. Native parent spacers cannot be removed by returning an empty child.
-- Timeline changes must cover live handlers in `../index.ts`, `restore` and compaction pruning. Only `agent_settled` completes a run; repeated starts and queued user input preserve its duration and open state.
-- Anchors select existing native rows, never move them. An assistant row precedes its streamed text and tools: retire only rows above it, once visible text arrives. A final answer may have no successor activity row; settlement must retain the completed disclosure at a surviving position.
-- Restore only the active branch. Do not fabricate archived tool rows to maintain visual continuity across context rollover.
+- Add folded notices to both activity.ts opt-ins and activity-messages.ts projection. Keep unknown content recoverable. Never infer success from unfamiliar envelopes.
+- Summary wording/density belongs in current-stage.ts, headings in ActivityGroup.label. Distinguish running, completed, failed and blocked. Nested evidence may replace executor labels, never invent activity.
+- Visual changes belong in renderers.ts and activity-messages.ts. Fit current width, preserve renderer state and both expansion levels. Empty children cannot remove native parent spacers.
+- Timeline changes cover live index.ts handlers, restore and compaction pruning. Only agent_settled completes runs. Repeated starts/queued input preserve duration and open state.
+- Anchors select rows, never move them. Assistant rows precede streamed text/tools. Retire only earlier rows after visible text arrives. Final answers may have no successor activity row, so settlement must retain disclosure at a surviving position.
+- Restore only the active branch. Never fabricate archived tool rows for rollover continuity.
