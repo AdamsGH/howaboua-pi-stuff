@@ -2,4 +2,6 @@
 "@howaboua/pi-shepherdr": patch
 ---
 
-Shepherdr now lists supported agent-read sources in help and invalid-source errors.
+Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes.
+
+Agent-read help and invalid-source errors now list supported sources.
