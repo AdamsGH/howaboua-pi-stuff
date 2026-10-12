@@ -12,6 +12,8 @@ export type ContinuityStrategy = "compaction" | "notes" | "notes-and-compaction"
 export type HistoryStorage = "local" | "tree" | "remote";
 export type ContextManagementMode = "off" | HistoryStorage;
 export type CompactionMethod = "pi" | "v2" | "both";
+export const IDLE_NOTES_MINUTES_OPTIONS = [0, 5, 15, 25, 55] as const;
+export type IdleNotesMinutes = (typeof IDLE_NOTES_MINUTES_OPTIONS)[number];
 export type V2UserMessageRetention = 16 | 32 | 64;
 export const MIN_NOTEBOOK_HEAP_MIB = 256;
 export const MAX_NOTEBOOK_HEAP_MIB = 65_536;
@@ -77,7 +79,7 @@ export interface CodexConversionConfig {
 		historyStorage: HistoryStorage;
 		notesTreeHandoff: boolean;
 		shareSubagentContext: boolean;
-		idleNotesRollover: boolean;
+		idleNotesRollover: IdleNotesMinutes;
 		taskBoundaryReminder: number;
 		method: CompactionMethod;
 		v2UserMessageRetention: V2UserMessageRetention;
@@ -147,7 +149,7 @@ export const DEFAULT_CODEX_CONVERSION_CONFIG: CodexConversionConfig = {
 		historyStorage: "local",
 		notesTreeHandoff: true,
 		shareSubagentContext: false,
-		idleNotesRollover: false,
+		idleNotesRollover: 0,
 		taskBoundaryReminder: 0,
 		method: "pi",
 		v2UserMessageRetention: 64,

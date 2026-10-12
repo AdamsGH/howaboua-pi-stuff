@@ -2,6 +2,8 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	type CodexConversionConfig,
 	normalizeHistoryStorage,
+	IDLE_NOTES_MINUTES_OPTIONS,
+	normalizeIdleNotesMinutes,
 	normalizeV2UserMessageRetention,
 	V2_USER_MESSAGE_RETENTION_OPTIONS,
 } from "../../adapter/activation/config.ts";
@@ -106,15 +108,18 @@ export function buildContextSettings(
 				compaction: { ...current.compaction, method: value === "Both" ? "both" : value === "Codex V2" ? "v2" : "pi" },
 			}),
 		)]),
-		...(!externalNotes && continuity === "notes" && plan.contextManagement ? [toggle(
-			"idleNotesRollover",
-			"New window after 25 minutes idle",
-			config.compaction.idleNotesRollover,
-			(enabled, current) => ({
+		...(!externalNotes && continuity === "notes" && plan.contextManagement ? [setting(
+			{
+				id: "idleNotesRollover",
+				label: "Idle rollover",
+				currentValue: config.compaction.idleNotesRollover ? `${config.compaction.idleNotesRollover} minutes` : "Off",
+				values: IDLE_NOTES_MINUTES_OPTIONS.map(minutes => minutes ? `${minutes} minutes` : "Off"),
+				description: "Before the next prompt, open a window only if the last completed run saved fresh notes. Off by default. This is an idle policy, not a cache-expiry check.",
+			},
+			(value, current) => ({
 				...current,
-				compaction: { ...current.compaction, idleNotesRollover: enabled },
+				compaction: { ...current.compaction, idleNotesRollover: normalizeIdleNotesMinutes(Number.parseInt(value, 10)) },
 			}),
-			"Before the next prompt, open a window only if the last completed run saved fresh notes. Off by default. This is an idle policy, not a cache-expiry check.",
 		)] : []),
 		...((externalNotes || continuity !== "notes") && method !== "pi" ? [setting(
 			{

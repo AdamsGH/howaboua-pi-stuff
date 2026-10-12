@@ -2,6 +2,8 @@
 "@howaboua/pi-notes-compaction": patch
 ---
 
+We've been informed that Astra and Sol currently retain their prompt caches for around an hour. If you use notes-managed idle rollover, consider increasing it from 25 to 55 minutes. Cache retention can vary. YMMV.
+
 Added configurable task-boundary reminders and a clearer settings layout.
 
 - Added optional reminders at preset or custom token counts when context capacity exceeds 272k, showing the remaining percentage.

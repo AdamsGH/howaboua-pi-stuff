@@ -16,6 +16,7 @@ import {
 	normalizeCustomRustBinariesDir,
 	normalizeDictationShortcutMode,
 	normalizeHistoryStorage,
+	normalizeIdleNotesMinutes,
 	normalizeLunaCacheKeepaliveMinutes,
 	normalizeProviderList,
 	normalizeRealtimeV3Voice,
@@ -146,10 +147,7 @@ export function normalizeCodexConversionConfig(
 				compaction["shareSubagentContext"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.shareSubagentContext,
 			),
-			idleNotesRollover: normalizeBoolean(
-				compaction["idleNotesRollover"],
-				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.idleNotesRollover,
-			),
+			idleNotesRollover: normalizeIdleNotesMinutes(compaction["idleNotesRollover"]),
 			taskBoundaryReminder: normalizeTaskBoundaryReminder(compaction["taskBoundaryReminder"]),
 			method: normalizeCompactionMethod(compaction["method"])
 				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.method,

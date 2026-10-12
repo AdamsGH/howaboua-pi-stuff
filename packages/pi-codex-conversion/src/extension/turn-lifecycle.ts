@@ -108,7 +108,7 @@ export function createCodexTurnLifecycle(
 			const identity = state.contextWindows.currentIdentity();
 			if (!checkpointInput && (state.contextKickoff.hasIdleInput || (inputPlan.idleNotesRollover && event.streamingBehavior === undefined &&
 				!state.contextTree.rolloverPending && !state.contextTree.handoff.active && !state.contextKickoff.pending &&
-				state.contextWindows.isIdleRolloverDue(ctx) && identity &&
+				state.contextWindows.isIdleRolloverDue(ctx, inputPlan.idleNotesRollover) && identity &&
 				hasFreshContextNotes(ctx.sessionManager.getBranch(), identity.currentWindowId, inputPlan.contextManagementMode, true)))) {
 				const result = await state.contextKickoff.prepareIdleInput(ctx, async () => {
 					if (!inputPlan.idleNotesRollover) throw new Error("Idle notes rollover is not active on this route");
