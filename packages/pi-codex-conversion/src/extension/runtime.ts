@@ -11,7 +11,7 @@ import { getCodexConversionConfigPath, readEffectiveCodexConversionConfig } from
 import { isAdapterRuntime, isCodeModeRuntime, resolveCodexRuntimePlanForState } from "../adapter/activation/runtime-plan.ts";
 import { CODE_MODE_TOOL_NAMES, NOTEBOOK_MODE_TOOL_NAMES } from "../adapter/activation/tool-set.ts";
 import type { AdapterState } from "../adapter/activation/state.ts";
-import { rewriteCodexProviderRequest, supportsCodexDeveloperMessages } from "../adapter/provider-request.ts";
+import { rewriteCodexProviderHeaders, rewriteCodexProviderRequest, supportsCodexDeveloperMessages } from "../adapter/provider-request.ts";
 import { isProviderContextExcludedMessage } from "../adapter/prompt/context-filter.ts";
 import { closeOpenAICodexKeepaliveWebSocketSession, closeOpenAICodexWebSocketSessions, prewarmOpenAICodexWebSocket, prewarmPreparedOpenAICodexWebSocket } from "../providers/openai-codex-custom-provider.ts";
 import { resetOpenAICodexWebSocketSessions } from "../providers/openai-codex/websocket.ts";
@@ -237,6 +237,7 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 					textVerbosity: config.openai.verbosity,
 					serviceTier: resolveFastModeServiceTier(config.openai.fast, model.id),
 				};
+				rewriteCodexProviderHeaders(options.headers!, ctx, { ...state, config, executionMode });
 				const originator = config.openai.harnessIdentifierHeader === "codex" ? "codex_cli_rs"
 					: config.openai.harnessIdentifierHeader ? PI_CODEX_CONVERSION_ORIGINATOR : "pi";
 				options.accessPrograms = await resolveDaybreakAccess(requestModel, options, config.openai.daybreak, preparedRequest?.body.model ?? model.id, originator);

@@ -32,6 +32,7 @@ import { hasTreeArchives } from "../../context-management/tree-archive.ts";
 import { projectTreeHandoffReads } from "../../context-management/tree-handoff-read.ts";
 import { projectContextWindowBranch } from "../../context-management/window-manager.ts";
 import { withRemoteCompactionV2Feature } from "../../providers/openai-responses/compaction-v2-feature.ts";
+import { rewriteRelationshipHeaders, rewriteRelationshipPayload } from "../../context-management/agent-relationship.ts";
 
 function compactionBranch(ctx: ExtensionContext, state: AdapterState): SessionEntry[] {
 	const branch = ctx.sessionManager.getBranch();
@@ -265,14 +266,20 @@ async function compactWithPiSummary(
 	const auth = runtime ?? await ctx.modelRegistry.getApiKeyAndHeaders(model);
 	if ("ok" in auth && !auth.ok) throw new Error(auth.error);
 	const stashed = runtime ? stashLatestNativeWindowForPiCompactionFallback(ctx, branchEntries, runtime, state) : false;
+	const headers = { ...auth.headers };
+	const codexTransport = resolveCodexRuntimePlanForState(ctx, state).effectiveOpenAICodex;
+	if (codexTransport) rewriteRelationshipHeaders(headers, ctx);
 	try {
 		const result = await runPortablePiCompaction({ ...event, branchEntries }, {
 			model: auth.baseUrl ? { ...model, baseUrl: auth.baseUrl } : model,
 			thinkingLevel: ctx.thinkingLevel,
 			apiKey: auth.apiKey,
-			headers: stashed ? withRemoteCompactionV2Feature(auth.headers) : auth.headers,
+			headers: stashed ? withRemoteCompactionV2Feature(headers) : headers,
 			env: auth.env,
-			onPayload: async (payload) => (await injectPendingNativeWindowIntoPiCompactionRequest(payload, ctx, state)) ?? payload,
+			onPayload: async (payload) => {
+				const rewritten = (await injectPendingNativeWindowIntoPiCompactionRequest(payload, ctx, state)) ?? payload;
+				return codexTransport ? rewriteRelationshipPayload(rewritten, ctx) : rewritten;
+			},
 		});
 		if (stashed && state.pendingPiCompactionNativeWindow)
 			throw new Error("the previous native checkpoint was not included in the summarization request");
@@ -342,6 +349,10 @@ async function handleCodexSessionBeforeCompactInner(event: SessionBeforeCompactE
 	if (plan.contextManagementRemote) {
 		runtime.headers = { ...runtime.headers };
 		state.contextWindows.rewriteHeaders(runtime.headers, ctx);
+	}
+	if (runtime.codexTransport) {
+		runtime.headers = { ...runtime.headers };
+		rewriteRelationshipHeaders(runtime.headers, ctx);
 	}
 	const latestNativeCompaction = resolveLatestNativeCompactionEntry(branchEntries, {
 		provider: runtime.provider,
@@ -445,11 +456,12 @@ async function handleCodexSessionBeforeCompactInner(event: SessionBeforeCompactE
 		promptInputSource: compactionDiagnostic.inputSource,
 		compactionDiagnostic,
 		requestOptions,
-		...(plan.contextManagementRemote ? {
-			rewritePayload: (payload: unknown) => {
-				return state.contextWindows.rewritePayload(rewriteRemoteContextNamespaceTools(payload), ctx);
-			},
-		} : {}),
+		rewritePayload: (payload: unknown) => {
+			const rewritten = plan.contextManagementRemote
+				? state.contextWindows.rewritePayload(rewriteRemoteContextNamespaceTools(payload), ctx)
+				: payload;
+			return runtime.codexTransport ? rewriteRelationshipPayload(rewritten, ctx) : rewritten;
+		},
 		tokensBefore: event.preparation.tokensBefore,
 		sessionId: ctx.sessionManager.getSessionId(),
 		signal: event.signal,

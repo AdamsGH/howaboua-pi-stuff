@@ -12,3 +12,4 @@
 - Encrypted notes/history stays in top-level Responses tool results, never unwrapped inside Code/Notebook.
 - agent-identity.ts owns family identity independently of branches. Bind only fresh, idle Pi threads before their first window. Recheck after async auth. Forks cannot reuse source agent paths. External notes use local family routing without rewriting historical Remote identity/account provenance.
 - Sharing opt-in gates new children, not existing identity/routes. Never detach a family when sharing is disabled.
+- agent-relationship.ts owns native parent thread linkage and subagent classification independently of notes sharing. Bind fresh workers before task submission; resume preserves linkage, forks do not inherit it. Keep compatibility headers and client metadata aligned, including prewarm and compaction requests.

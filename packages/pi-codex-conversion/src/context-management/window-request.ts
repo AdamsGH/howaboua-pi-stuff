@@ -2,6 +2,7 @@ import type { ProviderHeaders } from "@earendil-works/pi-ai";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ContextWindowIdentity } from "./messages.ts";
 import { contextAgentIdentity } from "./agent-identity.ts";
+import { relationshipTurnMetadata } from "./agent-relationship.ts";
 
 export function rewriteWindowPayload(
 	payload: unknown,
@@ -45,6 +46,7 @@ function requestMetadata(ctx: ExtensionContext, identity: ContextWindowIdentity,
 	const agent = contextAgentIdentity(ctx);
 	return {
 		session_id: agent.sessionId,
+		...relationshipTurnMetadata(ctx),
 		thread_id: sessionId,
 		agent_name: agent.agentName,
 		window_id: `${sessionId}:${identity.windowNumber}`,
