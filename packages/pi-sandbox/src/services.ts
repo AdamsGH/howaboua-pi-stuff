@@ -255,6 +255,8 @@ export class GuestServices {
 		};
 	}
 	private async healthy(name: string, entry: Entry): Promise<boolean> {
+		if (entry.service.health === "process")
+			return serviceRunning(this.vm, name);
 		const listening = await checked(
 			this.vm,
 			`python3 -c ${q("import socket,sys; s=socket.socket(); s.settimeout(1); print(s.connect_ex(('127.0.0.1',int(sys.argv[1])))==0); s.close()")} ${entry.port}`,

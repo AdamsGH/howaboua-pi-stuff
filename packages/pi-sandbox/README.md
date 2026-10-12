@@ -103,11 +103,13 @@ Services require a foreground login-shell `command`. Names contain 1 to 32 lower
 
 Use `services` with `ensure`, `status`, `restart`, or `stop`, optionally selecting one service. Ensure reads the current guest YAML and starts missing services. Restart reads the latest command, working directory, environment, and health path while retaining the assigned port and existing preview configuration. Ensure updates link declarations without replacing live processes. Services restart one second after exit, including successful exit. In this local implementation, ensure revives explicitly stopped services and reopen starts all declared services. Amp's public contract does not settle those two policies or successful-exit restart behavior.
 
-Readiness checks TCP by default. Set `health: /path` for an HTTP GET that accepts 2xx or 3xx after the port opens. The local declared-service readiness deadline `timeoutMs` defaults to 30000. Ad-hoc `service-start` waits up to 60 seconds and rejects names declared in the current YAML. A preview URL alone is not proof of readiness. Failure leaves the instance running so you can read `logs` and repair or stop the service.
+Readiness checks TCP by default. Set `health: /path` for an HTTP GET that accepts 2xx or 3xx after the port opens. Use `health: process` for a non-TCP daemon such as Herdr. This checks only that its supervisor is running, not application readiness. The local declared-service readiness deadline `timeoutMs` defaults to 30000. Ad-hoc `service-start` waits up to 60 seconds and rejects names declared in the current YAML. A preview URL alone is not proof of readiness. Failure leaves the instance running so you can read `logs` and repair or stop the service.
 
 Use `preview` with a guest `port`, optional `title`, and optional `description` to link an already-listening HTTP server without starting or supervising it. Gondolin's ingress accepts plain HTTP backends. HTTPS-only guest listeners require an HTTP-facing application proxy. This package does not implement Amp's authenticated domains or review interface.
 
 Guest HTTP responses must use `Content-Length` or chunked framing. Gondolin 0.13's transport can reset valid close-delimited responses before its gateway finishes forwarding them, producing an intermittent 502 even when the guest logged a response. Use explicit response framing in the application or its HTTP-facing proxy. TCP readiness alone cannot detect this failure.
+
+Gondolin 0.13 can also stall an upload when the backend rejects it before reading its body. Cancelling the client may leave an ingress connection that prevents `stop` from completing. This is not a successful disk checkpoint. The repository snapshot command below uses file operations rather than preview uploads to avoid this boundary.
 
 `preview: true` links to `/` with the service name. A mapping accepts `url`, `title`, and `description`, defaulting the first two to `/` and the service name. `previews` adds links to the same service, either `{url, title, description?}` or a one-level `{folder, links}` group. Folder names must be unique within a service. URLs accept application paths or absolute HTTP/HTTPS links. Entry paths do not remount the application. Results preserve link titles, descriptions, and folders. Local previews support HTTP and WebSockets. Their localhost ports are retained on reopen, but rebinding fails if another process has taken one. Always use returned URLs.
 
@@ -130,6 +132,20 @@ await tools.sandbox(JSON.stringify({action: 'exec-kill', name: 'demo', pid: comm
 Run `/sandbox <name> [user]` in Pi to get a temporary localhost SSH command. The user defaults to `root`. Run the returned command in a terminal on the VM host. The guest image must include an OpenSSH server and Gondolin's `sandboxssh` helper.
 
 The terminal uses a newly generated key, disables agent forwarding, and disconnects on stop. It does not import host credentials. Install and run whichever tools you choose inside the guest. If a tool needs authentication, complete your own fresh login in the instance, not in a reusable template. Allow its required hosts in the YAML before creation. Credentials saved in the instance persist on reopen. Checkpoints are ordinary local files protected by directory permissions, not package-managed encryption.
+
+## Review this repository
+
+From this monorepo checkout, refresh a disposable review candidate in an existing environment:
+
+```sh
+bun run sandbox:setup --name review
+```
+
+Add `--config sandbox.yaml` to create the environment first. The host needs Node 24 or newer and installed repository dependencies. The guest needs Bun, Node 24 or newer, Python 3, tar, make, g++, node-gyp, Herdr 0.9 or newer and `fd` on PATH. Provision node-gyp explicitly, for example with `npm install --global node-gyp@13.1.0`, rather than relying on Bun's first-use auto-install during native builds. Install `fd` through your guest's package manager because Pi's automatic download can fail behind the VM network gateway. The command installs Herdr's Pi integration through `herdr integration install pi` and loads it in the isolated agent directory. Allow the package registry and any build-download hosts required by the lockfile in your environment YAML.
+
+The command snapshots tracked working files, including edits and deletions, verifies the transferred archive, installs from the frozen lockfile and builds PCC. Untracked files and host credentials are not copied. Add new in-scope files to Git before refreshing. JJ workspaces use their working revision. Run the printed launch command in a guest Herdr pane. It uses the installed checkout's Pi with local PCC and Shepherdr packages in an isolated agent directory.
+
+Each successful refresh replaces the previous disposable candidate under the guest workspace's `pi-stuff-review` directory. Agent preferences and guest-owned authentication remain in its separate `agent` directory. Failed preparation leaves the selected candidate unchanged. Existing services are not restarted. Stop active review agents before refreshing, then use the printed command to load the new files. The guest is a snapshot, not a live mirror of the host.
 
 ## Recovery
 

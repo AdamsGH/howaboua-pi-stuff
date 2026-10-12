@@ -83,7 +83,7 @@ export const serviceRoot = "/var/lib/pi-sandbox/services";
 export async function serviceRunning(vm: VM, name: string): Promise<boolean> {
 	const result = await execute(
 		vm,
-		`test -f ${q(`${serviceRoot}/${name}.pid`)} && kill -0 "$(cat ${q(`${serviceRoot}/${name}.pid`)})" 2>/dev/null`,
+		`test -f ${q(`${serviceRoot}/${name}.pid`)} && pid=$(cat ${q(`${serviceRoot}/${name}.pid`)}) && kill -0 "$pid" 2>/dev/null && test "$(cut -d ' ' -f 3 "/proc/$pid/stat")" != Z`,
 		"/",
 		3000,
 	);
@@ -99,11 +99,11 @@ case "$pid" in ''|*[!0-9]*) echo 'Invalid service process identity'; exit 1;; es
 if test -d "/proc/$pid" && ! tr '\\000' '\\n' < "/proc/$pid/cmdline" | grep -Fx ${q(`${serviceRoot}/${name}.sh`)} >/dev/null; then
   rm -f ${q(path)}; exit 0
 fi
-kill -TERM -- "-$pid" 2>/dev/null || true
+kill -TERM "-$pid" 2>/dev/null || true
 attempt=0
-while kill -0 -- "-$pid" 2>/dev/null; do
+while kill -0 "-$pid" 2>/dev/null; do
   attempt=$((attempt + 1))
-  if test "$attempt" -ge 20; then kill -KILL -- "-$pid" 2>/dev/null || true; break; fi
+  if test "$attempt" -ge 20; then kill -KILL "-$pid" 2>/dev/null || true; break; fi
   sleep 0.1
 done
 rm -f ${q(path)}
