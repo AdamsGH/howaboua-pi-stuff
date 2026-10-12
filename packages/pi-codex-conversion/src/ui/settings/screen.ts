@@ -26,6 +26,7 @@ import { openCodexConfigInExternalEditor } from "./config-editor.ts";
 import { buildConfigSettings, type ConfigSetting } from "./config-items.ts";
 import { SETTINGS_TABS, type SettingsTab } from "./tabs.ts";
 import { nativeDevicePicker } from "./native-device-picker.ts";
+import { contextWindowPicker } from "./context-window-picker.ts";
 import { createUsageTab, type UsageTabOptions } from "./usage-tab.ts";
 
 export interface CodexSettingsScreenOptions extends UsageTabOptions {
@@ -67,6 +68,7 @@ export async function openCodexSettingsScreen(
 		const usageTab = createUsageTab(ctx, options, () => tui.requestRender(), usageSignal);
 		let settingsList: SettingsList;
 		let devicePickerOpen = false;
+		let contextWindowPickerOpen = false;
 
 		const runEditConfig = async () => {
 			if (!options.onChange(draft)) {
@@ -145,6 +147,14 @@ export async function openCodexSettingsScreen(
 					ctx,
 					options.externalNotes,
 				),
+				...(activeTab === "context" ? [{ item: {
+					id: "contextWindows", label: "Context windows (openai-codex)", currentValue: "",
+					description: "Set local capacity per model in Pi models.json. Global, regardless of the Editing scope above.",
+					submenu: (_value: string, back: () => void) => {
+						contextWindowPickerOpen = true;
+						return contextWindowPicker(ctx, theme, () => { contextWindowPickerOpen = false; back(); });
+					},
+				} }] : []),
 				...(activeTab === "voice"
 					? (["inputDevice", "outputDevice"] as const).map((key): ConfigSetting => ({
 							item: {
@@ -272,9 +282,9 @@ export async function openCodexSettingsScreen(
 						theme,
 						options.configScope.current(),
 					);
-				if (activeTab === "context")
+				if (activeTab === "context" && !contextWindowPickerOpen)
 					settingsLines = withContextPortabilityWarning(settingsLines, theme, width);
-				if (activeTab === "context" && !options.externalNotes && draft.compaction.continuity === "notes")
+				if (activeTab === "context" && !contextWindowPickerOpen && !options.externalNotes && draft.compaction.continuity === "notes")
 					settingsLines = withSettingsDetails(settingsLines, [
 						theme.fg("dim", "  /compact asks the model to save notes and hand off to a new context window, instead of summarizing."),
 					]);
@@ -299,14 +309,14 @@ export async function openCodexSettingsScreen(
 						: []),
 					"",
 					...(hasSettingsList
-						? withSettingsFooter(settingsLines, theme)
+						? contextWindowPickerOpen ? settingsLines : withSettingsFooter(settingsLines, theme)
 						: [theme.fg("dim", formatFooter(activeTab))]),
 					rule(width, theme, "accent"),
 				].map((line) => truncateToWidth(line, width, ""));
 			},
 			invalidate: () => settingsList.invalidate(),
 			handleInput: (data: string) => {
-				if (devicePickerOpen) {
+				if (devicePickerOpen || contextWindowPickerOpen) {
 					settingsList.handleInput(data);
 					tui.requestRender();
 					return;
