@@ -2,7 +2,11 @@ import {
 	type ExtensionContext,
 	getSettingsListTheme,
 } from "@earendil-works/pi-coding-agent";
-import { SettingsList, truncateToWidth } from "@earendil-works/pi-tui";
+import {
+	SettingsList,
+	truncateToWidth,
+	wrapTextWithAnsi,
+} from "@earendil-works/pi-tui";
 import { IDLE_MINUTES, type NotesSettings } from "./settings.js";
 import { TASK_BOUNDARY_PRESETS, taskBoundaryLabel } from "./task-boundary.js";
 
@@ -123,20 +127,36 @@ export async function openNotesSettings(
 					{ enableSearch: false },
 				);
 				return {
-					render: (width) =>
-						[
-							theme.fg("accent", "Notes & context"),
-							...status.map((line) => theme.fg("dim", line)),
+					render: (width) => {
+						const wrap = (text: string) =>
+							wrapTextWithAnsi(text, Math.max(1, width - 2)).map(
+								(line) => `  ${line}`,
+							);
+						const rule = theme.fg("accent", "─".repeat(Math.max(0, width)));
+						return [
+							rule,
+							`  ${theme.bold("Notes & context")}`,
 							"",
-							...list.render(width),
-							"",
-							theme.fg(
-								"dim",
-								"↑↓ navigate · Enter/Space change · Esc close · saved immediately",
+							...status.flatMap((line) =>
+								wrap(line).map((part) => theme.fg("dim", part)),
 							),
-						].map((line) => truncateToWidth(line, width)),
+							"",
+							...list.render(width).slice(0, -2),
+							"",
+							...wrap("↑/↓ select · Enter/Space change · Esc close").map(
+								(line) => theme.fg("dim", line),
+							),
+							...wrap("Settings saved immediately").map((line) =>
+								theme.fg("dim", line),
+							),
+							rule,
+						].map((line) => truncateToWidth(line, width, ""));
+					},
 					invalidate: () => list.invalidate(),
-					handleInput: (data) => list.handleInput(data),
+					handleInput: (data) => {
+						list.handleInput(data);
+						tui.requestRender();
+					},
 				};
 			},
 		);
