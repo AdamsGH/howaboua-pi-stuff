@@ -123,8 +123,8 @@ export function buildOpenAISettings(
 		setting(
 			{
 				id: "cacheDiagnostics",
-				description: "Show cache and continuation status below the editor, with optional diagnostic logging.",
-				label: "Cache diagnostics",
+				description: "Show compact cache status, with optional request, transport and timing logs.",
+				label: "Codex diagnostics",
 				currentValue: formatCacheDiagnostics(config.openai.cacheDiagnostics),
 				values: ["Off", "Status", "Status + log"],
 			},

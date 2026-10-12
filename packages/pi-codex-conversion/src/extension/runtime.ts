@@ -552,7 +552,7 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 			}
 			return diagnostics.configure({
 				mode: state.config.openai.cacheDiagnostics,
-				active: ctx.model?.provider === "openai-codex",
+				active: ctx.model?.api === "openai-codex-responses",
 				ctx,
 				agentDir: dirname(getCodexConversionConfigPath()),
 				logName: cacheEnvironment.logName,

@@ -68,7 +68,7 @@ Custom-tool contract changes and removals, including promoted tools, are announc
 | General | Settings scope, execution and extension modes, providers, heavy prompt overwrite, time reminders |
 | Context | Continuity, notes storage, subagent sharing, compaction, V2 retention |
 | Tools | Auto reasoning (GPT-6), image descriptions, standalone tools |
-| OpenAI | Per-family Fast and Ultrafast modes, Daybreak, verbosity, transport, cache diagnostics, Responses Lite |
+| OpenAI | Per-family Fast and Ultrafast modes, Daybreak, verbosity, transport, diagnostics, Responses Lite |
 | Display | Statusline, tool rendering, Code Mode detail, note save markers, background shells |
 | Voice | LAN server, realtime behaviour, summarisation, dictation, shortcuts, prompt paths |
 | Usage | Spend by model and reset window, Codex limits, banked reset credits |
@@ -189,9 +189,9 @@ Remote sharing requires the same Codex account and Remote storage throughout. Lo
 <a name="cache-diagnostics"></a>
 
 <details>
-<summary><strong>Cache diagnostics</strong></summary>
+<summary><strong>Codex diagnostics</strong></summary>
 
-Set **Cache diagnostics** to **Status** or **Status + log** under `/codex openai`. Off by default.
+Set **Codex diagnostics** to **Status** or **Status + log** under `/codex openai`. Off by default. The existing `openai.cacheDiagnostics` configuration key and values are unchanged.
 
 Pi's footer shows cache percentage. The extension-status row explains transport and continuation:
 
@@ -213,7 +213,17 @@ Codex adapter V: low • notebook mode Codex Cache • HIT • WS delta
 
 A miss stays visible for three seconds before the row jumps to the latest state. **WebSocket continuation and prompt caching are separate.** A full request can still hit the cache.
 
-**Status + log** adds `• log` and writes to `~/.pi/agent/pi-codex-logs/<session-derived-name>.log`. Logs include transport, continuation, token counts, retries and allowlisted errors. They exclude prompts, messages, tool arguments, images, credentials, provider payloads and response IDs.
+**Status + log** adds `• log` and writes to `~/.pi/agent/pi-codex-logs/<session-derived-name>.log`. Logs cover response, prewarm and native compaction requests, cache and continuation decisions, model settings, routing-hint presence, parent-link presence, allowlisted worker classification, token usage, retries, fallback and safe failures. Parent identifiers and routing-header values are not recorded. `previous_response_present` is a boolean, not a response ID.
+
+Logs exclude prompts, messages, tool arguments, images, credentials, provider payloads and response IDs.
+
+On a reused WebSocket, request settings describe the current body but handshake headers are not resent. `request_headers_sent=false` makes that boundary explicit. A routing hint is advisory, not evidence of a routing decision.
+
+Local request IDs correlate retries and fallback without using server IDs. Timings use a monotonic clock. `send_ms`, `first_event_ms`, `first_visible_text_ms` and `completion_ms` are measured from the local transport attempt start, including connection acquisition. First visible text means receipt of the first nonempty text delta, not a screen-paint timestamp. Completion means receipt of a terminal response event. `request_elapsed_ms` spans provider preparation and recovery, not the harness's whole user turn. For reused prewarm readiness without a sent request, only elapsed time is available.
+
+`output_tokens_per_second` is completed provider-reported output tokens divided by the interval from send to completion. It includes reasoning tokens where the provider includes them in output usage. It is not visible-text speed or an inference-only rate. Non-generating prewarm and failed attempts report no throughput. Missing local boundaries are `null`.
+
+Optional backend timing fields retain their original names. Missing fields are `"missing"` and explicit backend nulls remain `null`. Backend delta counts are not token counts, engine counters are not billing usage, and `engine_service_total_ms` is not inference duration.
 
 Pi's generic cache warmer is disabled on Codex and Responses Lite because they cannot honor its one-token output cap and warming would disturb continuation. Native Codex uses separately configured, isolated keepalive. Other routes retain Pi's warmer.
 
