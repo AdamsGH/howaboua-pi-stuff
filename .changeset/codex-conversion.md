@@ -11,6 +11,7 @@ OpenAI has increased GPT-6.1 Sol's default context window from 272k to 500k in C
 Added live context-window settings and configurable task-boundary reminders.
 
 - Idle rollover now offers Off, 5, 15, 25 and 55 minutes. Existing enabled settings retain 25 minutes.
+- Cache keepalive now recognises Astra, Sol, Terra and Luna across versions. Opt-in Astra/Sol/Terra request intervals offer 25 or 55 minutes per project. Luna offers 2.5 or 4.5 minute intervals within its existing global duration limit. Existing enabled settings retain their intervals. Requests use quota and do not guarantee cache retention.
 - Added per-model context presets, custom sizes and reset for OpenAI Codex, with effective-size verification after reload.
 - Added optional task-boundary reminders at preset or custom token counts when context capacity exceeds 272k, showing the remaining percentage.
 - Added Codex routing hints and Shepherdr parent-child metadata, preserved on resume and independent of shared notes.

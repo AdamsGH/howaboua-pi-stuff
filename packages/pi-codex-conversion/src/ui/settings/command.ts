@@ -157,7 +157,9 @@ export function registerCodexCommand(
 				openai: {
 					...selected.openai,
 					lunaCacheKeepaliveMinutes: effective.openai.lunaCacheKeepaliveMinutes,
+					lunaCacheKeepaliveIntervalMinutes: effective.openai.lunaCacheKeepaliveIntervalMinutes,
 					cacheKeepalive: effective.openai.cacheKeepalive,
+					cacheKeepaliveIntervalMinutes: effective.openai.cacheKeepaliveIntervalMinutes,
 				},
 			};
 		};
@@ -168,8 +170,8 @@ export function registerCodexCommand(
 			initialConfig: readSelectedConfig(),
 			initialTab: tab,
 			onChange: (config) => saveAndApply(ctx, configScope, config),
-			onGlobalLunaCacheKeepalive: (minutes) => {
-				const result = setGlobalCodexLunaCacheKeepalive(minutes);
+			onGlobalLunaCacheKeepalive: (minutes, interval) => {
+				const result = setGlobalCodexLunaCacheKeepalive(minutes, undefined, interval);
 				if (!result.ok) {
 					ctx.ui.notify(`Failed to save global Luna cache keepalive: ${result.error}`, "error");
 					return undefined;
@@ -177,8 +179,8 @@ export function registerCodexCommand(
 				applyEffectiveConfig(ctx);
 				return readSelectedConfig();
 			},
-			onProjectCacheKeepalive: (enabled) => {
-				const result = setProjectCodexCacheKeepalive(ctx.cwd, ctx.isProjectTrusted(), enabled);
+			onProjectCacheKeepalive: (enabled, interval) => {
+				const result = setProjectCodexCacheKeepalive(ctx.cwd, ctx.isProjectTrusted(), enabled, interval);
 				if (!result.ok) {
 					ctx.ui.notify(`Failed to save project cache keepalive: ${result.error}`, "error");
 					return undefined;
@@ -285,5 +287,5 @@ function formatCodexSettings(config: CodexConversionConfig): string {
 	const fast = [`all models ${allModelsFastModeState(config.openai.fast)}`,
 		...FAST_MODE_FAMILIES.map((family) => `${family} ${config.openai.fast[family] === "ultrafast" ? "ultrafast" : config.openai.fast[family] ? "on" : "off"}`)].join(", ");
 	const accessProgram = config.openai.daybreak ? "on" : "off";
-	return `Codex settings: extension ${config.voiceFeaturesOnly ? "voice only" : "adapter and voice"}, execution ${config.executionMode}, providers ${formatAllProvidersMode(config.scope.allProviders)}, Rust binaries ${config.tools.customRustBinariesDir || "bundled"}, heavy prompt overwrite ${config.prompt.heavySystemPromptOverwrite ? "on" : "off"}, harness identifier ${config.openai.harnessIdentifierHeader ? "on" : "off"}, Proxy Responses Lite ${config.openai.proxyResponsesLite ? "on" : "off"}, continuity ${CONTINUITY_LABELS[config.compaction.continuity]}, history and notes storage ${config.compaction.historyStorage}, share subagent context ${config.compaction.shareSubagentContext ? "on" : "off"}, compaction method ${COMPACTION_METHOD_LABELS[config.compaction.method]}, preserved user messages (V2 only) ${config.compaction.v2UserMessageRetention}k, Luna cache keepalive ${config.openai.lunaCacheKeepaliveMinutes === 0 ? "off" : `${config.openai.lunaCacheKeepaliveMinutes} mins`}, Sol/Terra cache keepalive ${config.openai.cacheKeepalive ? "25 mins" : "off"}, cache diagnostics ${config.openai.cacheDiagnostics}, Daybreak ${accessProgram}, Fast Mode ${fast}, verbosity ${config.openai.verbosity}`;
+	return `Codex settings: extension ${config.voiceFeaturesOnly ? "voice only" : "adapter and voice"}, execution ${config.executionMode}, providers ${formatAllProvidersMode(config.scope.allProviders)}, Rust binaries ${config.tools.customRustBinariesDir || "bundled"}, heavy prompt overwrite ${config.prompt.heavySystemPromptOverwrite ? "on" : "off"}, harness identifier ${config.openai.harnessIdentifierHeader ? "on" : "off"}, Proxy Responses Lite ${config.openai.proxyResponsesLite ? "on" : "off"}, continuity ${CONTINUITY_LABELS[config.compaction.continuity]}, history and notes storage ${config.compaction.historyStorage}, share subagent context ${config.compaction.shareSubagentContext ? "on" : "off"}, compaction method ${COMPACTION_METHOD_LABELS[config.compaction.method]}, preserved user messages (V2 only) ${config.compaction.v2UserMessageRetention}k, Luna cache keepalive ${config.openai.lunaCacheKeepaliveMinutes === 0 ? "off" : `${config.openai.lunaCacheKeepaliveMinutes} mins duration, ${config.openai.lunaCacheKeepaliveIntervalMinutes} mins request interval`}, Astra/Sol/Terra cache keepalive ${config.openai.cacheKeepalive ? `${config.openai.cacheKeepaliveIntervalMinutes} mins request interval` : "off"}, cache diagnostics ${config.openai.cacheDiagnostics}, Daybreak ${accessProgram}, Fast Mode ${fast}, verbosity ${config.openai.verbosity}`;
 }

@@ -12,7 +12,7 @@ import {
 	truncateToWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import type { CodexConversionConfig, LunaCacheKeepaliveMinutes } from "../../adapter/activation/config.ts";
+import type { CodexConversionConfig, LunaCacheKeepaliveMinutes, LunaCacheKeepaliveIntervalMinutes, CacheKeepaliveIntervalMinutes } from "../../adapter/activation/config.ts";
 import type { CodexConversionConfigScope } from "../../adapter/activation/config-store.ts";
 import type { ExecutionMode } from "../../adapter/activation/execution-mode.ts";
 import type { CodexLanVoiceServerStatus } from "../../voice/lan/controller.ts";
@@ -36,8 +36,8 @@ export interface CodexSettingsScreenOptions extends UsageTabOptions {
 	waitForIdle: () => Promise<void>;
 	initialConfig: CodexConversionConfig;
 	onChange: (nextConfig: CodexConversionConfig) => boolean;
-	onGlobalLunaCacheKeepalive: (minutes: LunaCacheKeepaliveMinutes) => CodexConversionConfig | undefined;
-	onProjectCacheKeepalive: (enabled: boolean) => CodexConversionConfig | undefined;
+	onGlobalLunaCacheKeepalive: (minutes: LunaCacheKeepaliveMinutes, interval: LunaCacheKeepaliveIntervalMinutes) => CodexConversionConfig | undefined;
+	onProjectCacheKeepalive: (enabled: boolean, interval: CacheKeepaliveIntervalMinutes) => CodexConversionConfig | undefined;
 	initialTab?: SettingsTab | undefined;
 	configScope: {
 		current: () => CodexConversionConfigScope;
@@ -193,7 +193,8 @@ export async function openCodexSettingsScreen(
 						return;
 					}
 					if (definition?.action === "project-cache-keepalive") {
-						const nextDraft = options.onProjectCacheKeepalive(value !== "off");
+						const interval = value === "off" ? draft.openai.cacheKeepaliveIntervalMinutes : value === "55 mins" ? 55 : 25;
+						const nextDraft = options.onProjectCacheKeepalive(value !== "off", interval);
 						if (nextDraft) {
 							draft = nextDraft;
 							for (const { item } of buildSettings()) list.updateValue(item.id, item.currentValue);
@@ -203,9 +204,12 @@ export async function openCodexSettingsScreen(
 						tui.requestRender();
 						return;
 					}
-					if (definition?.action === "global-luna-cache-keepalive") {
-						const minutes = (value === "off" ? 0 : Number.parseInt(value, 10)) as LunaCacheKeepaliveMinutes;
-						const nextDraft = options.onGlobalLunaCacheKeepalive(minutes);
+					if (definition?.action === "global-luna-cache-keepalive" || definition?.action === "global-luna-cache-keepalive-interval") {
+						const editingInterval = definition.action === "global-luna-cache-keepalive-interval";
+						const minutes = editingInterval ? draft.openai.lunaCacheKeepaliveMinutes
+							: (value === "off" ? 0 : Number.parseInt(value, 10)) as LunaCacheKeepaliveMinutes;
+						const interval = editingInterval ? (value === "4.5 mins" ? 4.5 : 2.5) : draft.openai.lunaCacheKeepaliveIntervalMinutes;
+						const nextDraft = options.onGlobalLunaCacheKeepalive(minutes, interval);
 						if (nextDraft) {
 							draft = nextDraft;
 							for (const { item } of buildSettings()) list.updateValue(item.id, item.currentValue);

@@ -18,7 +18,7 @@ export function normalizeFastMode(value: unknown): FastModeConfig {
 	};
 }
 
-function resolveFastModeFamily(modelId: string | undefined): FastModeFamily | undefined {
+export function resolveCodexModelFamily(modelId: string | undefined): FastModeFamily | undefined {
 	const id = modelId?.split("/").at(-1)?.trim().toLowerCase();
 	// The backend's reserve route is Luna without a family suffix.
 	if (id === "gpt-reserve") return "luna";
@@ -35,6 +35,6 @@ export function allModelsFastModeState(fast: FastModeConfig): "on" | "off" | "ul
 }
 
 export function resolveFastModeServiceTier(fast: FastModeConfig, modelId: string | undefined): "priority" | "ultrafast" | undefined {
-	const value = fast[resolveFastModeFamily(modelId) ?? "other"];
+	const value = fast[resolveCodexModelFamily(modelId) ?? "other"];
 	return value === "ultrafast" ? "ultrafast" : value ? "priority" : undefined;
 }

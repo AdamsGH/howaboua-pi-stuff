@@ -95,7 +95,7 @@ The first setting chooses **Global** or **This project**:
 - **Global:** `~/.pi/agent/pi-codex-conversion.json`.
 - **This project:** creates a snapshot at `.pi/pi-codex-conversion.json`. Every tab and **Edit config** targets it. Only trusted folders are read.
 - Switching back to Global removes project overrides. Without a project file, all settings inherit globally.
-- GPT-5.6 Luna cache keepalive remains global. GPT-5.6 Sol and Terra keepalive follows the project.
+- Luna cache keepalive remains global. Astra, Sol and Terra keepalive follows the project, across model versions.
 
 Fast Mode has independent settings for Astra, Sol, Terra and Luna, shared across each family's model versions. Choose off, on for priority processing, or Ultrafast. Existing boolean preferences still work. `PI_CODEX_FAST=1`, `0` or `ultrafast` overrides every family for one Pi process. Availability depends on the model and account. Ultrafast API-equivalent estimates use the published rates for GPT-6 Astra and GPT-6.1 Sol, six times Standard. Other models retain base-rate estimates without an unknown Ultrafast premium. These estimates are not subscription quota rates. Run `/reload` after editing config files by hand.
 
@@ -226,6 +226,10 @@ Local request IDs correlate retries and fallback without using server IDs. Timin
 Optional backend timing fields retain their original names. Missing fields are `"missing"` and explicit backend nulls remain `null`. Backend delta counts are not token counts, engine counters are not billing usage, and `engine_service_total_ms` is not inference duration.
 
 Pi's generic cache warmer is disabled on Codex and Responses Lite because they cannot honor its one-token output cap and warming would disturb continuation. Native Codex uses separately configured, isolated keepalive. Other routes retain Pi's warmer.
+
+Keepalive is opt-in and sends quota-consuming requests while idle. In `/codex` under OpenAI, Astra, Sol and Terra offer Off or a 25 or 55 minute request interval for this project. Luna offers a global Off or 5, 10 or 15 minute duration, with a separate 2.5 or 4.5 minute request interval. Changing Luna's interval does not enable keepalive or extend its duration. Requests stop when that duration expires, and completed requests can reduce how many fit within it. Existing enabled settings retain their 25 minute or 2.5 minute interval.
+
+These are request intervals, not guaranteed cache lifetimes. Reports suggest around an hour for Astra and Sol and five minutes for Luna 6, but retention can vary. Keepalive intervals are independent of notes-managed idle rollover and task-boundary reminders.
 
 </details>
 

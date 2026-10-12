@@ -7,6 +7,8 @@ export type FastModeConfig = Record<FastModeFamily | "other", boolean | "ultrafa
 export type CacheDiagnosticsMode = "off" | "status" | "status-and-log";
 export type CompactToolsMode = "off" | "on" | "minimal";
 export type LunaCacheKeepaliveMinutes = 0 | 5 | 10 | 15;
+export type LunaCacheKeepaliveIntervalMinutes = 2.5 | 4.5;
+export type CacheKeepaliveIntervalMinutes = 25 | 55;
 export type AllProvidersMode = "off" | "on" | "extras";
 export type ContinuityStrategy = "compaction" | "notes" | "notes-and-compaction";
 export type HistoryStorage = "local" | "tree" | "remote";
@@ -112,7 +114,9 @@ export interface CodexConversionConfig {
 		daybreak: boolean;
 		verbosity: CodexVerbosity;
 		lunaCacheKeepaliveMinutes: LunaCacheKeepaliveMinutes;
+		lunaCacheKeepaliveIntervalMinutes: LunaCacheKeepaliveIntervalMinutes;
 		cacheKeepalive: boolean;
+		cacheKeepaliveIntervalMinutes: CacheKeepaliveIntervalMinutes;
 		proxyResponsesLite: boolean;
 		forceCachedWebSockets: boolean;
 		cacheDiagnostics: CacheDiagnosticsMode;
@@ -179,7 +183,9 @@ export const DEFAULT_CODEX_CONVERSION_CONFIG: CodexConversionConfig = {
 		daybreak: false,
 		verbosity: "low",
 		lunaCacheKeepaliveMinutes: 0,
+		lunaCacheKeepaliveIntervalMinutes: 2.5,
 		cacheKeepalive: false,
+		cacheKeepaliveIntervalMinutes: 25,
 		proxyResponsesLite: false,
 		forceCachedWebSockets: true,
 		cacheDiagnostics: "off",

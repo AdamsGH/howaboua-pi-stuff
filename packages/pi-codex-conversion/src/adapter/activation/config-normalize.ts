@@ -235,6 +235,8 @@ export function normalizeCodexConversionConfig(
 				openai["cacheKeepalive"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.openai["cacheKeepalive"],
 			),
+			lunaCacheKeepaliveIntervalMinutes: openai["lunaCacheKeepaliveIntervalMinutes"] === 4.5 ? 4.5 : 2.5,
+			cacheKeepaliveIntervalMinutes: openai["cacheKeepaliveIntervalMinutes"] === 55 ? 55 : 25,
 			proxyResponsesLite: normalizeBoolean(
 				openai["proxyResponsesLite"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.openai.proxyResponsesLite,
