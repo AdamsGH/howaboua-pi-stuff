@@ -306,6 +306,7 @@ Read `connection.service` at the point of use. It is optional and can become ava
 |---|---|
 | `protocol` | `1` |
 | `canCreateChild(ctx)` | Whether parental shared-context opt-in permits a new child |
+| `bindRelationship(ctx, relationship)` | Optional synchronous binding of native parent linkage and worker classification in a fresh idle child, independently of shared notes |
 | `describe(ctx)` | `ContextAgentIdentity` or `undefined` |
 | `verify(ctx)` | Checks applicable Remote account compatibility |
 | `createChild(ctx, { name, routing? })` | A promise of `{ binding, adopt() }`; prepares a child identity |
@@ -322,6 +323,34 @@ Read `connection.service` at the point of use. It is optional and can become ava
 | `readAttachmentNotes(snapshot, params)` | Optional read from a validated snapshot |
 
 The optional attachment methods vary with the installed provider. Check their presence before offering the capability. They support a host's alias/attachment workflow without pretending an existing session is a fresh child.
+
+### Parent and worker relationships
+
+The same service optionally exposes `bindRelationship(ctx: ExtensionContext, relationship: unknown): CodexAgentRelationship`. The exported `CodexAgentRelationship` type has optional `parentThreadId: string` and `subagentKind: string` fields. At least one must be present. Values must be nonempty printable ASCII without spaces. A worker cannot name itself as its parent.
+
+Check capability availability on the live child service before binding:
+
+```ts
+import type { CodexAgentRelationship } from
+  "@howaboua/pi-codex-conversion/context-sharing";
+
+const relationship: CodexAgentRelationship = {
+  parentThreadId: parentCtx.sessionManager.getSessionId(),
+  subagentKind: "collab_spawn",
+};
+// After child startup, in its live owner, before submitting the first task:
+const childService = childConnection.service;
+if (childService?.bindRelationship) {
+  const adopted = childService.bindRelationship(childCtx, relationship);
+  // Verify adopted against relationship before task delivery.
+}
+```
+
+Your orchestrator supplies the trusted transport to that live child owner. This is a PCC service contract, not a public RPC endpoint. Shepherdr implements the transport and automatically binds fresh spawned workers before their first task when both participants expose the capability. It uses the immediate parent's native Pi session ID and `collab_spawn`, including for nested workers. Profiles selecting existing sessions do not create a new relationship.
+
+Parent and worker retain distinct native Pi session IDs. Linkage does not merge their transcripts, grant notes access or require **Share subagent context**. Shared-note family IDs and agent paths remain a separate contract. Binding requires a fresh idle session before its first task. Repeating the same binding is idempotent; a conflicting binding fails. Resume preserves the relationship on the original native thread. A fork creates a new native thread and does not inherit it.
+
+PCC includes the relationship in supported Codex request metadata, including prewarm and native compaction. These fields identify linkage and classification, not shared storage or a promised backend quota policy. Older services without this optional method still support their existing capabilities.
 
 ### Fresh-child lifecycle
 

@@ -475,7 +475,9 @@ Subscribers receive independent structured clones and run in registration order,
 
 ### Context sharing
 
-The optional `context-sharing` API does not require Shepherdr:
+The optional `context-sharing` API does not require Shepherdr.
+
+Its optional `bindRelationship(ctx, relationship)` method links a fresh worker's native Pi thread to its parent before the first task. Parent and worker keep distinct session IDs. This linkage is independent of shared notes and the sharing setting. Shepherdr binds fresh spawns automatically with `subagentKind: "collab_spawn"`. Resume preserves linkage; forks do not inherit it. Check method availability on the live service. See the [parent and worker relationship contract](../../docs/extension-apis.md#parent-and-worker-relationships) for the signature and lifecycle.
 
 ```ts
 import { connectCodexContextSharing } from "@howaboua/pi-codex-conversion/context-sharing";
