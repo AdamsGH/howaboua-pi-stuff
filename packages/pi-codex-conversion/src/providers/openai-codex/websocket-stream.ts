@@ -204,7 +204,6 @@ export async function prewarmWebSocket<TApi extends Api>(
 		if (!preserveContinuation && !generate && reused && entry?.continuation
 			&& (prewarm.kind === "ordinary" || (cachedRequest.decision === "delta" && requestBody.input.length === 0))) {
 			recordDiagnostics?.({ type: "prewarm-ready", requestId: requestTiming.requestId, transport: "websocket", socketReused: reused, socketAgeMs, socketLane, prewarm });
-			timing.finish("completed");
 			return { socketReused: reused };
 		}
 		recordDiagnostics?.({

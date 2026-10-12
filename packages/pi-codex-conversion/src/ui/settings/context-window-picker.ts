@@ -55,6 +55,7 @@ export function contextWindowPicker(ctx: ExtensionContext, theme: Theme, setMode
 					if (ctx.modelRegistry.getError()) throw new Error("Context window saved, but model configuration could not reload. Fix models.json and retry.");
 					const refreshed = ctx.modelRegistry.find(model.provider, model.id);
 					if (!refreshed) throw new Error("Context window saved, but the model is unavailable. Check models.json and retry.");
+					if (tokens !== undefined && refreshed.contextWindow !== tokens) throw new Error("Context window saved, but another model definition takes precedence. Edit models.json and retry.");
 					if (ctx.model?.provider === model.provider && ctx.model.id === model.id && !await setModel(refreshed))
 						throw new Error("Context window saved, but could not apply to the active model. Sign in and retry.");
 					list.updateValue(model.id, format(refreshed.contextWindow));
