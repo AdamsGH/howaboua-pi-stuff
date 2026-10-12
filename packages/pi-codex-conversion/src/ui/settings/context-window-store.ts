@@ -10,16 +10,6 @@ function object(value: unknown): ObjectValue {
 
 export function contextWindowModelsPath(): string { return join(getAgentDir(), "models.json"); }
 
-export function readContextWindowOverride(modelId: string, path = contextWindowModelsPath()): number | undefined {
-	const document = readDocument(path);
-	const provider = object(object(document["providers"])["openai-codex"] ?? {});
-	const override = object(object(provider["modelOverrides"] ?? {})[modelId] ?? {});
-	const value = override["contextWindow"];
-	if (value === undefined) return undefined;
-	if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) throw new Error("Invalid contextWindow in models.json. Enter a positive whole token count.");
-	return value;
-}
-
 function readDocument(path: string): ObjectValue {
 	if (!existsSync(path)) return { providers: {} };
 	let parsed: unknown;
