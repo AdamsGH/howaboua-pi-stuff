@@ -6,6 +6,7 @@ export type IdleMinutes = (typeof IDLE_MINUTES)[number];
 export interface NotesSettings {
 	normalCompaction: boolean;
 	idleMinutes: IdleMinutes;
+	taskBoundaryReminder: boolean;
 }
 
 export function readSettings(path: string): NotesSettings {
@@ -14,7 +15,11 @@ export function readSettings(path: string): NotesSettings {
 		source = readFileSync(path, "utf8");
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT")
-			return { normalCompaction: false, idleMinutes: 0 };
+			return {
+				normalCompaction: false,
+				idleMinutes: 0,
+				taskBoundaryReminder: false,
+			};
 		throw error;
 	}
 	const settings: unknown = JSON.parse(source);
@@ -28,6 +33,12 @@ export function readSettings(path: string): NotesSettings {
 			"Invalid notes settings. Save a setting in /notes, then reload Pi.",
 		);
 	const idleMinutes = "idleMinutes" in settings ? settings.idleMinutes : 0;
+	const taskBoundaryReminder =
+		"taskBoundaryReminder" in settings ? settings.taskBoundaryReminder : false;
+	if (typeof taskBoundaryReminder !== "boolean")
+		throw new Error(
+			"Invalid task-boundary reminder setting. Save a setting in /notes, then reload Pi.",
+		);
 	if (!IDLE_MINUTES.some((value) => value === idleMinutes))
 		throw new Error(
 			"Invalid idle rollover interval. Choose off, 5, 15, 25 or 55 minutes.",
@@ -35,6 +46,7 @@ export function readSettings(path: string): NotesSettings {
 	return {
 		normalCompaction: settings.normalCompaction,
 		idleMinutes: idleMinutes as IdleMinutes,
+		taskBoundaryReminder,
 	};
 }
 

@@ -149,6 +149,10 @@ export function normalizeCodexConversionConfig(
 				compaction["idleNotesRollover"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.idleNotesRollover,
 			),
+			taskBoundaryReminder: normalizeBoolean(
+				compaction["taskBoundaryReminder"],
+				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.taskBoundaryReminder,
+			),
 			method: normalizeCompactionMethod(compaction["method"])
 				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.method,
 			v2UserMessageRetention:

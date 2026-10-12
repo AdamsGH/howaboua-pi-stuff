@@ -10,12 +10,16 @@ import type {
 import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Box, Text, TruncatedText } from "@earendil-works/pi-tui";
 import type { WindowIdentity } from "./bridge.js";
+import {
+	hasExtendedContextOverride,
+	TASK_BOUNDARY_REMINDER,
+} from "./task-boundary.js";
 
 export const WINDOW_MESSAGE = "notes-compaction:window:v1";
 export const SETTLEMENT_ENTRY = "notes-compaction:settled:v1";
 export interface WindowDetails {
 	protocol: 1;
-	kind: "window" | "identity" | "reminder" | "urgent";
+	kind: "window" | "identity" | "reminder" | "urgent" | "task-boundary";
 	identity: WindowIdentity;
 	trim: boolean;
 }
@@ -32,11 +36,13 @@ export function registerWindowRenderer(pi: ExtensionAPI): void {
 			const details = parseWindowDetails(message.details);
 			if (!details || typeof message.content !== "string") return undefined;
 			const title =
-				details.kind === "urgent"
-					? "Context nearly full · Save notes and start a new window now"
-					: details.kind === "reminder"
-						? "Context checkpoint reminder · Save notes and start a new window"
-						: `Context window ${details.identity.windowNumber + 1} · Notes and history`;
+				details.kind === "task-boundary"
+					? "Task-boundary reminder"
+					: details.kind === "urgent"
+						? "Context nearly full · Save notes and start a new window now"
+						: details.kind === "reminder"
+							? "Context checkpoint reminder · Save notes and start a new window"
+							: `Context window ${details.identity.windowNumber + 1} · Notes and history`;
 			const box = new Box(outputPad, 1, (text) =>
 				theme.bg("customMessageBg", text),
 			);
@@ -85,7 +91,7 @@ function parseWindowDetails(value: unknown): WindowDetails | undefined {
 	if (
 		details.protocol !== 1 ||
 		!ids ||
-		!["window", "identity", "reminder", "urgent"].includes(
+		!["window", "identity", "reminder", "urgent", "task-boundary"].includes(
 			details.kind ?? "",
 		) ||
 		typeof details.trim !== "boolean"
@@ -100,7 +106,9 @@ function parseWindowDetails(value: unknown): WindowDetails | undefined {
 }
 
 /** Understand previous PCC window IDs for familiar history lookup, without importing its runtime. */
-export function windowDetails(entry: SessionEntry): WindowDetails | undefined {
+export function windowDetails(
+	entry: SessionEntry | CustomMessageEntryDraft,
+): WindowDetails | undefined {
 	if (entry.type !== "custom_message") return;
 	return messageWindowDetails(entry.customType, entry.details);
 }
@@ -122,14 +130,14 @@ function messageWindowDetails(
 		!details ||
 		typeof details !== "object" ||
 		!("kind" in details) ||
-		details.kind !== "window"
+		(details.kind !== "window" && details.kind !== "task-boundary")
 	)
 		return;
 	const ids = identity(details);
 	return ids
 		? {
 				protocol: 1,
-				kind: "window",
+				kind: details.kind,
 				identity: ids,
 				trim:
 					"trimPreviousWindow" in details &&
@@ -182,13 +190,18 @@ export class Windows {
 				this.compactedSinceBoundary = false;
 			} else if (
 				details &&
-				(details.kind === "reminder" || details.kind === "urgent")
+				(details.kind === "reminder" ||
+					details.kind === "urgent" ||
+					details.kind === "task-boundary")
 			)
 				this.reminders.add(
 					`${details.identity.currentWindowId}:${details.kind}`,
 				);
 			if (entry.type === "compaction") {
-				this.reminders.clear();
+				// Compaction frees capacity, but does not create a new window identity.
+				this.reminders = new Set(
+					[...this.reminders].filter((key) => key.endsWith(":task-boundary")),
+				);
 				this.compactedSinceBoundary = true;
 			}
 		}
@@ -226,21 +239,43 @@ export class Windows {
 					: Math.round((remainingTokens / contextWindow) * 1000) / 10,
 		};
 	}
-	reminder(ctx: ExtensionContext): CustomMessageEntryDraft | undefined {
+	reminder(
+		ctx: ExtensionContext,
+		taskBoundaryReminder = false,
+		checkpointReminder = true,
+	): CustomMessageEntryDraft | undefined {
 		const { remainingTokens, contextWindow, remainingPercent } =
 			this.remaining(ctx);
 		if (!this.current || remainingTokens === undefined) return;
 		const used = 100 * (1 - remainingTokens / contextWindow);
-		const kind = used >= 90 ? "urgent" : used >= 85 ? "reminder" : undefined;
-		if (!kind || this.reminders.has(`${this.current.currentWindowId}:${kind}`))
-			return;
-		this.reminders.add(`${this.current.currentWindowId}:reminder`);
+		let kind: WindowDetails["kind"] | undefined = checkpointReminder
+			? used >= 90
+				? "urgent"
+				: used >= 85
+					? "reminder"
+					: undefined
+			: undefined;
+		if (kind && this.reminders.has(`${this.current.currentWindowId}:${kind}`))
+			kind = undefined;
+		if (
+			!kind &&
+			taskBoundaryReminder &&
+			!this.reminders.has(`${this.current.currentWindowId}:task-boundary`) &&
+			(ctx.getContextUsage()?.tokens ?? 0) >= 250_000 &&
+			hasExtendedContextOverride(ctx)
+		)
+			kind = "task-boundary";
+		if (!kind) return;
+		this.reminders.add(`${this.current.currentWindowId}:${kind}`);
 		if (kind === "urgent")
-			this.reminders.add(`${this.current.currentWindowId}:urgent`);
+			this.reminders.add(`${this.current.currentWindowId}:reminder`);
 		return {
 			type: "custom_message",
 			customType: WINDOW_MESSAGE,
-			content: `<context_window_reminder>\n${kind === "urgent" ? "Urgent: " : ""}${remainingPercent}% remaining. Checkpoint the active request, state and known history IDs in notes, then call new_context ${kind === "urgent" ? "now, before other work" : "before continuing work"}.\n</context_window_reminder>`,
+			content:
+				kind === "task-boundary"
+					? TASK_BOUNDARY_REMINDER
+					: `<context_window_reminder>\n${kind === "urgent" ? "Urgent: " : ""}${remainingPercent}% remaining. Checkpoint the active request, state and known history IDs in notes, then call new_context ${kind === "urgent" ? "now, before other work" : "before continuing work"}.\n</context_window_reminder>`,
 			display: true,
 			details: {
 				protocol: 1,

@@ -168,10 +168,28 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 			);
 		}
 	});
-	pi.on("turn_end", (_event, ctx) => {
-		if (!lifecycle.active || lifecycle.fresh(ctx, lifecycle.runId)) return;
-		const reminder = lifecycle.windows.reminder(ctx);
-		return reminder ? { entries: [reminder] } : undefined;
+	pi.on("turn_end", (event, ctx) => {
+		if (!lifecycle.active) return;
+		const reminder = lifecycle.windows.reminder(
+			ctx,
+			lifecycle.taskBoundaryReminder &&
+				event.message.role === "assistant" &&
+				!ctx.signal?.aborted &&
+				!["error", "length", "aborted"].includes(event.message.stopReason) &&
+				event.toolResults.length > 0 &&
+				pi.getActiveTools().includes("new_context"),
+			!lifecycle.fresh(ctx, lifecycle.runId),
+		);
+		return reminder
+			? {
+					entries: [
+						...event.entries,
+						windowDetails(reminder)?.kind === "task-boundary"
+							? (lifecycle.bridge?.prepareReminder?.(reminder) ?? reminder)
+							: reminder,
+					],
+				}
+			: undefined;
 	});
 	pi.on("context", (event, ctx) => {
 		if (!lifecycle.active) return;
@@ -240,6 +258,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 					settings: () => ({
 						normalCompaction: lifecycle.normalCompaction,
 						idleMinutes: lifecycle.idleMinutes,
+						taskBoundaryReminder: lifecycle.taskBoundaryReminder,
 					}),
 					save,
 					prune,

@@ -29,6 +29,16 @@ export function buildContextSettings(
 	const supportsV2 = isAdapterRuntime(plan) && plan.effectiveOpenAICodex;
 	const { continuity, historyStorage, method, v2UserMessageRetention } = config.compaction;
 	return [
+		...(!externalNotes ? [toggle(
+			"taskBoundaryReminder",
+			"Task-boundary reminder",
+			config.compaction.taskBoundaryReminder,
+			(enabled, current) => ({
+				...current,
+				compaction: { ...current.compaction, taskBoundaryReminder: enabled },
+			}),
+			"Suggest a new window at a separate task boundary when an explicit context setting exceeds 400k. Requires notes continuity.",
+		)] : []),
 		...(externalNotes ? [{ item: {
 			id: "externalNotes", label: "Notes continuity", currentValue: "Externally managed",
 			description: "The notes extension owns notes, history and window rollover. Saved PCC continuity settings are retained for sessions without it.",

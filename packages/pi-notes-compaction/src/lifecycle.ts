@@ -50,6 +50,7 @@ export class NotesLifecycle {
 	active = false;
 	normalCompaction = false;
 	idleMinutes: IdleMinutes = 0;
+	taskBoundaryReminder = false;
 	bridge: NotesBridge | undefined;
 	runId = "";
 	private checkpoint: Checkpoint | undefined;

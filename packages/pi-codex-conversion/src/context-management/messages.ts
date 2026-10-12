@@ -15,6 +15,7 @@ export const CONTEXT_WINDOW_URGENT_PERCENT = 90;
 export type ContextManagementMessageKind =
 	| "window"
 	| "identity"
+	| "task-boundary"
 	| "reminder"
 	| "urgent"
 	| "fallback";
@@ -106,6 +107,7 @@ export function isCodexContextManagementMessageDetails(
 		record["protocol"] === 1 &&
 		(record["kind"] === "window" ||
 			record["kind"] === "identity" ||
+			record["kind"] === "task-boundary" ||
 			record["kind"] === "reminder" ||
 			record["kind"] === "urgent" ||
 			record["kind"] === "fallback") &&

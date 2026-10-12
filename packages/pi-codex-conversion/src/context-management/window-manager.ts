@@ -318,10 +318,12 @@ export class CodexContextWindowManager {
 		ctx: ExtensionContext,
 		mode: ContextManagementMode,
 		contextTokens?: number,
+		taskBoundaryReminder = false,
 	): CustomMessageEntryDraft | undefined {
 		if (mode === "off" || !this.identity || this.rolloverPending) return;
-		if (hasFreshContextNotes(ctx.sessionManager.getBranch(), this.identity.currentWindowId, mode, false)) return;
-		const reminder = this.budget.record(ctx, this.identity, contextTokens);
+		const reminder = (!hasFreshContextNotes(ctx.sessionManager.getBranch(), this.identity.currentWindowId, mode, false)
+			? this.budget.record(ctx, this.identity, contextTokens) : undefined)
+			?? (taskBoundaryReminder ? this.budget.recordTaskBoundary(ctx, this.identity, contextTokens) : undefined);
 		if (reminder) return createContextWindowMessage(reminder.content, reminder.kind, this.identity);
 	}
 
@@ -434,7 +436,7 @@ export class CodexContextWindowManager {
 
 	recordCompaction(details: unknown): void {
 		if (!isContextWindowCompactionDetails(details)) {
-			this.budget.reset();
+			this.budget.resetThresholds();
 			// A real checkpoint supersedes any pending notes-only trim.
 			this.trimPendingWindowId = undefined;
 		} else if (details.windowId === this.trimPendingWindowId)

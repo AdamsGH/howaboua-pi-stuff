@@ -2,6 +2,7 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type {
 	AgentToolResult,
 	ExtensionContext,
+	CustomMessageEntryDraft,
 	SessionEntry,
 	SessionBeforeCompactEvent,
 	ToolDefinition,
@@ -59,6 +60,8 @@ export interface SerializedNotesResponse extends Omit<CachedResponse, "bytes"> {
 
 export interface NotesBridge {
 	protocol: 1;
+	/** Preserve the owner's chronological entry while enabling developer-role delivery. */
+	prepareReminder?(entry: CustomMessageEntryDraft): CustomMessageEntryDraft;
 	/** Synchronous atomic handoff. No legacy registrations or lifecycle owners remain active. */
 	claim(owner: NotesOwner):
 		| {

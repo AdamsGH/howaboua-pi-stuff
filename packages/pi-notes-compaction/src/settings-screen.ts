@@ -32,6 +32,14 @@ export async function openNotesSettings(
 							values: ["off", "on"],
 						},
 						{
+							id: "taskBoundaryReminder",
+							label: "Task-boundary reminder",
+							description:
+								"Suggest a new window at a separate task boundary when an explicit context setting exceeds 400k.",
+							currentValue: settings.taskBoundaryReminder ? "on" : "off",
+							values: ["off", "on"],
+						},
+						{
 							id: "idle",
 							label: "Idle rollover",
 							description:
@@ -59,6 +67,11 @@ export async function openNotesSettings(
 						try {
 							if (id === "compact")
 								options.save({ ...current, normalCompaction: value === "on" });
+							else if (id === "taskBoundaryReminder")
+								options.save({
+									...current,
+									taskBoundaryReminder: value === "on",
+								});
 							else {
 								const idleMinutes = IDLE_MINUTES.find(
 									(minutes) => idleValue(minutes) === value,
@@ -69,11 +82,15 @@ export async function openNotesSettings(
 						} catch (error) {
 							list.updateValue(
 								id,
-								id === "compact"
-									? current.normalCompaction
+								id === "taskBoundaryReminder"
+									? current.taskBoundaryReminder
 										? "on"
 										: "off"
-									: idleValue(current.idleMinutes),
+									: id === "compact"
+										? current.normalCompaction
+											? "on"
+											: "off"
+										: idleValue(current.idleMinutes),
 							);
 							ctx.ui.notify(
 								`Could not save notes settings: ${String(error)}`,

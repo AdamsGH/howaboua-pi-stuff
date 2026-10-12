@@ -88,7 +88,8 @@ export function createCodexTurnLifecycle(
 			})) return;
 			// Budget maintenance must not restart an assistant that has already answered.
 			if (state.contextTree.handoff.active || event.toolResults.length === 0) return;
-			const reminder = state.contextWindows.recordBudget(ctx, plan.contextManagement ? plan.contextManagementMode : "off");
+			const reminder = state.contextWindows.recordBudget(ctx, plan.contextManagement ? plan.contextManagementMode : "off",
+				undefined, state.config.compaction.taskBoundaryReminder && pi.getActiveTools().includes("new_context"));
 			if (reminder) return { entries: [...event.entries, reminder], continue: true };
 		},
 		input: async (event, ctx) => {

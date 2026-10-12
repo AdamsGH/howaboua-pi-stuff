@@ -23,6 +23,14 @@ export interface CodexDeveloperMessageDetails {
 export const CODEX_DEVELOPER_MESSAGE_TYPE = "codex-developer-message";
 
 const CUSTOM_DEVELOPER_DETAILS_KEY = "@howaboua/pi-codex-conversion/developer-message";
+
+/** Annotate a boundary entry without sending or starting a turn. */
+export function withCodexDeveloperMessageDetails<T extends { details?: unknown }>(message: T): T {
+	const details = message.details;
+	if (!details || typeof details !== "object" || Array.isArray(details))
+		throw new Error("Context reminder could not be delivered. Reload Pi and try again.");
+	return { ...message, details: { ...details, [CUSTOM_DEVELOPER_DETAILS_KEY]: { protocol: 1, id: randomUUID() } } };
+}
 const PENDING_DEVELOPER_MESSAGE_TYPE = "codex-pending-developer-message";
 
 export interface CodexDeveloperCustomMessage {
