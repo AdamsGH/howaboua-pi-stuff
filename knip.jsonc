@@ -61,7 +61,7 @@
 			"entry": ["changelog.ts"]
 		},
 		"packages/pi-sandbox": {
-			"entry": ["src/daemon.ts"]
+			"entry": ["changelog.ts", "src/daemon.ts"]
 		},
 		"packages/pi-pet": {
 			"ignoreDependencies": ["@howaboua/pi-gippity-control"],
