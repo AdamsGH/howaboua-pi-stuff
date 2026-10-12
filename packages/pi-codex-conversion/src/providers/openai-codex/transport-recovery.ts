@@ -234,7 +234,8 @@ export function createCodexTransportStream<TApi extends Api>(
 				await osInfoReady;
 				preconnect = preconnectWebSocket(
 					resolveCodexWebSocketUrl(model.baseUrl),
-					buildWebSocketHeaders(model.headers, effectiveOptions.headers, accountId, apiKey, websocketRequestId, originator),
+					buildWebSocketHeaders(model.headers, effectiveOptions.headers, accountId, apiKey, websocketRequestId, originator,
+						{ model: model.id, service_tier: effectiveOptions.serviceTier ?? undefined }),
 					effectiveOptions.sessionId, accountId, effectiveOptions.signal,
 					normalizeTimeoutMs(effectiveOptions.websocketConnectTimeoutMs, "websocketConnectTimeoutMs"), effectiveOptions.env,
 					(error) => diagnostics?.({ type: "failure", lane: "prewarm", transport: "websocket", failure: codexDiagnosticsFailure(error) }),
@@ -244,7 +245,7 @@ export function createCodexTransportStream<TApi extends Api>(
 			const body = reconstructedBody;
 			if (hasRemoteCompactionV2Input(body.input)) effectiveOptions.headers = withRemoteCompactionV2Feature(effectiveOptions.headers);
 			if (preconnect) {
-				const finalHeaders = buildWebSocketHeaders(model.headers, effectiveOptions.headers, accountId, apiKey, websocketRequestId, originator);
+				const finalHeaders = buildWebSocketHeaders(model.headers, effectiveOptions.headers, accountId, apiKey, websocketRequestId, originator, body);
 				const failure = await preconnect.handoff(resolveCodexWebSocketUrl(model.baseUrl), finalHeaders, accountId, effectiveOptions.env,
 					getEffectiveCodexTransport(options?.transport, runtimeConfig?.openai, options?.sessionId) !== "sse");
 				if (failure && !(failure.error instanceof CodexProtocolError)
@@ -272,8 +273,8 @@ export function createCodexTransportStream<TApi extends Api>(
 				);
 			lane = diagnosticsLane(body);
 			deps.onPreparedPayload?.(body);
-			const baseSseHeaders = buildSSEHeaders(model.headers, effectiveOptions?.headers, accountId, apiKey, effectiveOptions?.sessionId, responsesLite, originator);
-			const websocketHeaders = buildWebSocketHeaders(model.headers, effectiveOptions?.headers, accountId, apiKey, websocketRequestId, originator);
+			const baseSseHeaders = buildSSEHeaders(model.headers, effectiveOptions?.headers, accountId, apiKey, effectiveOptions?.sessionId, responsesLite, originator, body);
+			const websocketHeaders = buildWebSocketHeaders(model.headers, effectiveOptions?.headers, accountId, apiKey, websocketRequestId, originator, body);
 			const bodyJson = JSON.stringify(body);
 			const websocketBody = responsesLite ? applyResponsesLiteWebSocketMetadata(body) : body;
 			const compressedBody = compressRequestBodyZstd(bodyJson);

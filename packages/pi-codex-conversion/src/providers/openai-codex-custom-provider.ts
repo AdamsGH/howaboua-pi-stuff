@@ -131,7 +131,7 @@ export async function prewarmPreparedOpenAICodexWebSocket<TApi extends Api>(
 	const originator = runtimeConfig?.openai.harnessIdentifierHeader === "codex" ? "codex_cli_rs"
 		: runtimeConfig?.openai.harnessIdentifierHeader ? PI_CODEX_CONVERSION_ORIGINATOR : "pi";
 	const requestHeaders = hasRemoteCompactionV2Input(body.input) ? withRemoteCompactionV2Feature(options.headers) : options.headers;
-	const headers = buildWebSocketHeaders(model.headers, requestHeaders, accountId, options.apiKey, options.sessionId, originator);
+	const headers = buildWebSocketHeaders(model.headers, requestHeaders, accountId, options.apiKey, options.sessionId, originator, body);
 	const turnState = deps.preserveContinuation ? undefined : deps.turnState;
 	const websocketBody = withCodexTurnState(responsesLite ? applyResponsesLiteWebSocketMetadata(body) : body, turnState);
 	const diagnostics = noThrowCodexDiagnosticsSink(deps.getDiagnostics?.());
