@@ -38,7 +38,8 @@ export function codexAgentRelationship(ctx: Pick<ExtensionContext, "sessionManag
 	return relationship;
 }
 
-export function bindCodexAgentRelationship(pi: ExtensionAPI, ctx: ExtensionContext, input: unknown): CodexAgentRelationship {
+export function bindCodexAgentRelationship(pi: ExtensionAPI, ctx: ExtensionContext, input: unknown,
+	isPristineStartup?: (ctx: ExtensionContext) => boolean): CodexAgentRelationship {
 	const relationship = parseRelationship(input);
 	if (relationship.parentThreadId === ctx.sessionManager.getSessionId()) throw new Error("An agent cannot be its own parent");
 	const current = codexAgentRelationship(ctx);
@@ -46,8 +47,10 @@ export function bindCodexAgentRelationship(pi: ExtensionAPI, ctx: ExtensionConte
 		if (!isDeepStrictEqual(current, relationship)) throw new Error("An existing agent relationship cannot be rebound");
 		return current;
 	}
-	if (!ctx.isIdle() || ctx.sessionManager.getEntries().some(entry =>
-		entry.type === "message" || entry.type === "custom_message" || entry.type === "compaction" || entry.type === "branch_summary"))
+	// An external notes owner recognises its initial UI window without admitting work.
+	const pristine = isPristineStartup ? isPristineStartup(ctx) : !ctx.sessionManager.getEntries().some(entry =>
+		entry.type === "message" || entry.type === "custom_message" || entry.type === "compaction" || entry.type === "branch_summary");
+	if (!ctx.isIdle() || !pristine)
 		throw new Error("Agent relationship requires a fresh, idle session before its first task");
 	pi.appendEntry(RELATIONSHIP_ENTRY, { ...relationship, threadId: ctx.sessionManager.getSessionId() });
 	return relationship;

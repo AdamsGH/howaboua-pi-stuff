@@ -66,7 +66,7 @@ export function registerContextSharingService(
 	};
 	const service: ContextSharingService = {
 		protocol: 1,
-		bindRelationship: (ctx, relationship) => bindCodexAgentRelationship(pi, ctx, relationship),
+		bindRelationship: (ctx, relationship) => bindCodexAgentRelationship(pi, ctx, relationship, externalOwner()?.canBind),
 		canCreateChild: (ctx) => plan(ctx).shareSubagentContext,
 		describe,
 		async verify(ctx) {

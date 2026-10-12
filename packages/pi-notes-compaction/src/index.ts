@@ -54,6 +54,15 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 					entry.customType === "@howaboua/pi-stuff/changelog"
 				)
 					return true;
+				// PCC links the fresh worker before binding its shared notes family.
+				if (
+					entry.type === "custom" &&
+					entry.customType === "codex-agent-relationship"
+				)
+					return (
+						(entry.data as { threadId?: unknown } | undefined)?.threadId ===
+						ctx.sessionManager.getSessionId()
+					);
 				// Herdr activation persists its empty registry before first task delivery.
 				if (
 					entry.type === "custom" &&
