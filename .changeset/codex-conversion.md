@@ -2,7 +2,7 @@
 "@howaboua/pi-codex-conversion": patch
 ---
 
-We've been informed that Astra and Sol currently retain their prompt caches for around an hour. If you use notes-managed idle rollover, consider increasing it from 25 to 55 minutes. Cache retention can vary. YMMV.
+We've been informed that Astra and Sol currently retain their prompt caches for around an hour. If you use notes-managed idle rollover, consider increasing it from 25 to 55 minutes. Cache retention can vary. YMMV. We'll keep monitoring. Please share your cache-retention and long-context quota observations in [the feedback thread](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues/508).
 
 We recommend the openai-codex provider, whether supplied by Pi or PCC. The newer Sign in with ChatGPT route under openai supports normal chat but has significant restrictions affecting other features. See [the compatibility findings](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues/484).
 
