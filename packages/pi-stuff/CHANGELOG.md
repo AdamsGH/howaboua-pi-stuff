@@ -1,5 +1,13 @@
 # @howaboua/pi-stuff
 
+## 0.0.102
+
+- Include bundled package updates:
+
+  - @howaboua/pi-ask: Ask now separates exact choice labels from descriptions in forwarded questions.
+  - @howaboua/pi-pet: Pi Pet desktop now requires Node 22.12 or newer.
+  - @howaboua/pi-shepherdr: Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes. Agent-read help and invalid-source errors now list supported sources.
+
 ## 0.0.101
 
 - Include bundled package updates:

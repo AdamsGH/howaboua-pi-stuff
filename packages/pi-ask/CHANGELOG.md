@@ -1,5 +1,9 @@
 # @howaboua/pi-ask
 
+## 0.0.14
+
+- Ask now separates exact choice labels from descriptions in forwarded questions.
+
 ## 0.0.13
 
 - Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers.

@@ -33,12 +33,9 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-agent-board/CHANGELOG.md)
 
-### @howaboua/pi-ask — 0.0.13
+### @howaboua/pi-ask — 0.0.14
 
-- Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers.
-
-  - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation.
-  - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
+- Ask now separates exact choice labels from descriptions in forwarded questions.
 
 [Full changelog](./packages/pi-ask/CHANGELOG.md)
 
@@ -88,9 +85,23 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-chatgpt-sites/CHANGELOG.md)
 
-### @howaboua/pi-codex-conversion — 3.0.50
+### @howaboua/pi-codex-conversion — 3.0.51
 
-- Fixed `/compact` starting an unwanted summary request when Notes Compaction's Normal compaction setting is off. Codex Conversion now honours that setting before starting compaction.
+- We've been informed that Astra and Sol currently retain their prompt caches for around an hour. If you use notes-managed idle rollover, consider increasing it from 25 to 55 minutes. Cache retention can vary. YMMV. We'll keep monitoring. Please share your cache-retention and long-context quota observations in [the feedback thread](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues/508).
+
+  We recommend the openai-codex provider, whether supplied by Pi or PCC. The newer Sign in with ChatGPT route under openai supports normal chat but has significant restrictions affecting other features. See [the compatibility findings](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues/484).
+
+  OpenAI has increased GPT-6.1 Sol's default context window from 272k to 500k in Codex and Work. We recommend selecting Codex under Harness identifier header in PCC settings. This sends codex_cli_rs, and we've aligned provider requests more closely with Codex. We have not verified whether these requests receive the same long-context pricing or subscription treatment.
+
+  Added live context-window settings and configurable task-boundary reminders.
+
+  - Idle rollover now offers Off, 5, 15, 25 and 55 minutes. Existing enabled settings retain 25 minutes.
+  - Cache keepalive now recognises Astra, Sol, Terra and Luna across versions. Opt-in Astra/Sol/Terra request intervals offer 25 or 55 minutes per project. Luna offers 2.5 or 4.5 minute intervals within its existing global duration limit. Existing enabled settings retain their intervals. Requests use quota and do not guarantee cache retention.
+  - Added per-model context presets, custom sizes and reset for OpenAI Codex, with effective-size verification after reload.
+  - Added optional task-boundary reminders at preset or custom token counts when context capacity exceeds 272k, showing the remaining percentage.
+  - Added Codex routing hints and Shepherdr parent-child metadata, preserved on resume and independent of shared notes.
+  - Expanded opt-in diagnostics with routing, worker relationships, request timings and output throughput, including sent prewarm requests and native compaction. Fixed logging for renamed Codex providers.
+  - Notes help now lists required arguments. Writes accept `content` when `text` is omitted.
 
 [Full changelog](./packages/pi-codex-conversion/CHANGELOG.md)
 
@@ -130,12 +141,13 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-explore-subagents/CHANGELOG.md)
 
-### @howaboua/pi-extensions — 0.0.93
+### @howaboua/pi-extensions — 0.0.94
 
 - Include bundled package updates:
 
-  - @howaboua/pi-ask: Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers. - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation. - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
-  - @howaboua/pi-shepherdr: Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers. - Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers. - Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked. - Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once. - Context rollover now retains supervised workers and their full follow-up instructions. - Spawn labels no longer have a word-count restriction.
+  - @howaboua/pi-ask: Ask now separates exact choice labels from descriptions in forwarded questions.
+  - @howaboua/pi-pet: Pi Pet desktop now requires Node 22.12 or newer.
+  - @howaboua/pi-shepherdr: Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes. Agent-read help and invalid-source errors now list supported sources.
 
 [Full changelog](./packages/pi-extensions/CHANGELOG.md)
 
@@ -181,20 +193,34 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-memories/CHANGELOG.md)
 
-### @howaboua/pi-notes-compaction — 0.0.4
+### @howaboua/pi-notes-compaction — 0.0.5
 
-- Fixed note queries and manual context rollover with Codex Conversion.
+- We've been informed that Astra and Sol currently retain their prompt caches for around an hour. If you use notes-managed idle rollover, consider increasing it from 25 to 55 minutes. Cache retention can vary. YMMV. We'll keep monitoring. Please share your cache-retention and long-context quota observations in [the feedback thread](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues/508).
 
-  - Restored negative line ranges, default limits, result ordering, metadata and complete read and search content. Help now shows concrete call syntax, and invalid arguments are reported before execution.
-  - `/compact` now honours the Normal compaction setting. With it off, Notes Compaction reuses fresh saved notes or requests a checkpoint, then opens a new context window without starting a continuation turn.
+  Added configurable task-boundary reminders and a clearer settings layout.
+
+  - Added optional reminders at preset or custom token counts when context capacity exceeds 272k, showing the remaining percentage.
+  - Status text and keyboard hints now wrap to fit narrow terminals.
+  - Notes help now lists required arguments. Writes accept `content` when `text` is omitted.
+  - Fixed fresh worker startup with Notes enabled.
 
 [Full changelog](./packages/pi-notes-compaction/CHANGELOG.md)
 
-### @howaboua/pi-pet — 0.1.4
+### @howaboua/pi-pet — 0.1.5
 
-- Remove obsolete test-only helper exports without changing tool behavior.
+- Pi Pet desktop now requires Node 22.12 or newer.
 
 [Full changelog](./packages/pi-pet/CHANGELOG.md)
+
+### @howaboua/pi-sandbox — 0.1.1
+
+- Added Pi Sandbox for persistent local Gondolin environments and app previews.
+
+  - Named instances and reusable prepared templates retain guest files across disk checkpoints and reopen.
+  - Managed services provide readiness checks, restart supervision and localhost HTTP and WebSocket previews.
+  - Guest commands, file access and temporary SSH terminals work without forwarding host credentials.
+
+[Full changelog](./packages/pi-sandbox/CHANGELOG.md)
 
 ### @howaboua/pi-semantic-grep — 0.1.19
 
@@ -208,15 +234,11 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-semantic-grep/CHANGELOG.md)
 
-### @howaboua/pi-shepherdr — 0.2.18
+### @howaboua/pi-shepherdr — 0.2.19
 
-- Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers.
+- Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes.
 
-  - Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers.
-  - Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked.
-  - Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once.
-  - Context rollover now retains supervised workers and their full follow-up instructions.
-  - Spawn labels no longer have a word-count restriction.
+  Agent-read help and invalid-source errors now list supported sources.
 
 [Full changelog](./packages/pi-shepherdr/CHANGELOG.md)
 
@@ -272,12 +294,13 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-smart-btw/CHANGELOG.md)
 
-### @howaboua/pi-stuff — 0.0.101
+### @howaboua/pi-stuff — 0.0.102
 
 - Include bundled package updates:
 
-  - @howaboua/pi-ask: Ask now accepts supervisor replies through Shepherdr's `reply` action. Update and reload Ask and Shepherdr together on controllers and workers. - Supervisors receive questions, choices and a reply template. Valid replies complete the worker's existing wait or steer panel. Human handoffs still require the user's confirmation. - Unknown or misnamed fields, such as `options` instead of `choices`, and malformed choices now return errors naming the invalid field and accepted shape instead of silently dropping input.
-  - @howaboua/pi-shepherdr: Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers. - Assignments now update running agents without losing pending results or replacing existing waiters. Messages and assignments also reach blocked workers. - Extension messages and reply templates now travel between local and remote agents. Replies reach the owning extension without an extra model turn, including while a worker is busy or blocked. - Pending extension messages remain visible until their producer closes them. Blocking messages arrive with the blocked result. Nonblocking messages notify separately once. - Context rollover now retains supervised workers and their full follow-up instructions. - Spawn labels no longer have a word-count restriction.
+  - @howaboua/pi-ask: Ask now separates exact choice labels from descriptions in forwarded questions.
+  - @howaboua/pi-pet: Pi Pet desktop now requires Node 22.12 or newer.
+  - @howaboua/pi-shepherdr: Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes. Agent-read help and invalid-source errors now list supported sources.
 
 [Full changelog](./packages/pi-stuff/CHANGELOG.md)
 
