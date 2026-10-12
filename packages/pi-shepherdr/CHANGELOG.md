@@ -1,5 +1,11 @@
 # @howaboua/pi-shepherdr
 
+## 0.2.19
+
+- Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes.
+
+  Agent-read help and invalid-source errors now list supported sources.
+
 ## 0.2.18
 
 - Replaced the Ask-specific `answer` action with `reply` for extension replies. Update and reload Ask and Shepherdr together on controllers and workers.
