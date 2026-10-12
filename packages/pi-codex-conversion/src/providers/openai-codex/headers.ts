@@ -154,6 +154,7 @@ export function buildWebSocketHeaders(
 	headers.delete("OpenAI-Beta");
 	headers.delete("openai-beta");
 	headers.set("OpenAI-Beta", OPENAI_BETA_RESPONSES_WEBSOCKETS);
+	headers.set("x-responsesapi-include-timing-metrics", "true");
 	headers.set("x-client-request-id", requestId);
 	headers.set("session-id", requestId);
 	headers.set("thread-id", requestId);
