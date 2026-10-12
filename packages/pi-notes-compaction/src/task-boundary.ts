@@ -1,7 +1,8 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-export const TASK_BOUNDARY_REMINDER =
-	"<context_window_reminder>\nThis window is approaching the recommended token budget. If the current task is nearly finished and the next task is clearly separate, finish this task, save a checkpoint, and start a new window. Otherwise, continue here.\n</context_window_reminder>";
+export function renderTaskBoundaryReminder(remainingPercent: number): string {
+	return `<context_window_reminder>\nThis window is approaching the recommended token budget. You still have ${remainingPercent}% of your context window remaining, so there is no need to start a new window immediately. If you are working through a sequence of tasks toward a larger goal, finish the current task, save a checkpoint, and start a new window before continuing with the next task. Otherwise, continue here.\n</context_window_reminder>`;
+}
 
 export const TASK_BOUNDARY_PRESETS = [
 	0, 250_000, 300_000, 400_000, 450_000,

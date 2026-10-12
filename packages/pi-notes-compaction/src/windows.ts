@@ -11,7 +11,7 @@ import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Box, Text, TruncatedText } from "@earendil-works/pi-tui";
 import type { WindowIdentity } from "./bridge.js";
 import {
-	TASK_BOUNDARY_REMINDER,
+	renderTaskBoundaryReminder,
 	taskBoundaryEligible,
 } from "./task-boundary.js";
 
@@ -246,7 +246,12 @@ export class Windows {
 	): CustomMessageEntryDraft | undefined {
 		const { remainingTokens, contextWindow, remainingPercent } =
 			this.remaining(ctx);
-		if (!this.current || remainingTokens === undefined) return;
+		if (
+			!this.current ||
+			remainingTokens === undefined ||
+			remainingPercent === undefined
+		)
+			return;
 		const used = 100 * (1 - remainingTokens / contextWindow);
 		let kind: WindowDetails["kind"] | undefined = checkpointReminder
 			? used >= 90
@@ -273,7 +278,7 @@ export class Windows {
 			customType: WINDOW_MESSAGE,
 			content:
 				kind === "task-boundary"
-					? TASK_BOUNDARY_REMINDER
+					? renderTaskBoundaryReminder(remainingPercent)
 					: `<context_window_reminder>\n${kind === "urgent" ? "Urgent: " : ""}${remainingPercent}% remaining. Checkpoint the active request, state and known history IDs in notes, then call new_context ${kind === "urgent" ? "now, before other work" : "before continuing work"}.\n</context_window_reminder>`,
 			display: true,
 			details: {
