@@ -21,7 +21,7 @@ function questionText(request: AskRequest): string {
 							`Choose ${prompt.multiple ? "one or more" : "one"}:`,
 							...prompt.choices.map(
 								(choice) =>
-									`- ${choice.label}${choice.description ? `: ${choice.description}` : ""}`,
+									`- ${JSON.stringify(choice.label)}${choice.description ? `\n  ${choice.description}` : ""}`,
 							),
 						]
 					: ["Free-text answer"]),

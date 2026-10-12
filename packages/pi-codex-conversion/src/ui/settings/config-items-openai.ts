@@ -48,8 +48,8 @@ export function buildOpenAISettings(
 		{
 			item: {
 				id: "lunaCacheKeepaliveMinutes",
-				description: "Send idle requests every 2.5 minutes for this duration to keep GPT-5.6 Luna's prompt cache warm. Uses quota.",
-				label: "GPT-5.6 Luna cache keepalive (global)",
+				description: "Limit idle Luna keepalive requests to this duration across versions. Uses quota. Off disables requests.",
+				label: "Luna keepalive duration (global)",
 				currentValue: config.openai.lunaCacheKeepaliveMinutes === 0
 					? "off"
 					: `${config.openai.lunaCacheKeepaliveMinutes} mins`,
@@ -57,10 +57,21 @@ export function buildOpenAISettings(
 			},
 			action: "global-luna-cache-keepalive",
 		},
+		{
+			item: {
+				id: "lunaCacheKeepaliveIntervalMinutes",
+				label: "Luna keepalive request interval (global)",
+				description: "Choose 2.5 or 4.5 minutes between idle requests within the duration above. Does not enable keepalive. Cache retention is not guaranteed.",
+				currentValue: `${config.openai.lunaCacheKeepaliveIntervalMinutes} mins`,
+				values: ["2.5 mins", "4.5 mins"],
+			},
+			action: "global-luna-cache-keepalive-interval",
+		},
 		projectCacheKeepalive(
 			"cacheKeepalive",
-			"GPT-5.6 Sol/Terra cache keepalive (this project)",
+			"Astra/Sol/Terra keepalive request interval (this project)",
 			config.openai.cacheKeepalive,
+			config.openai.cacheKeepaliveIntervalMinutes,
 		),
 		setting(
 			{
@@ -123,8 +134,8 @@ export function buildOpenAISettings(
 		setting(
 			{
 				id: "cacheDiagnostics",
-				description: "Show cache and continuation status below the editor, with optional diagnostic logging.",
-				label: "Cache diagnostics",
+				description: "Show compact cache status, with optional request, transport and timing logs.",
+				label: "Codex diagnostics",
 				currentValue: formatCacheDiagnostics(config.openai.cacheDiagnostics),
 				values: ["Off", "Status", "Status + log"],
 			},

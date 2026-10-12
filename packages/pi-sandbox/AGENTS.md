@@ -1,4 +1,5 @@
-- Keep this package source-only and private until publication is explicitly requested; do not add release changesets or aggregate membership.
+- Publish as a standalone package. Keep it outside aggregates: installation requires host virtualisation tools and explicit environment provisioning.
+- Build the controller before using a source checkout. Plain Node cannot strip TypeScript inside npm's node_modules; keep the daemon launch on packaged dist/daemon.js, not src/daemon.ts.
 - Prefer per-environment YAML for resource, network, setup and service customization. Host YAML seeds new disks; existing instances own their guest `.sandbox.yaml`. Changing defaults does not migrate saved instances.
 - Keep the agent entry point `sandbox` help-backed and deferred in Code/Notebook. Change action validation and on-demand help together in `src/contracts.ts`; `/sandbox` is a user terminal handoff, not an agent tool.
 - Use supported Gondolin APIs, not patches to its transport. Document backend limits rather than hiding them behind retries.

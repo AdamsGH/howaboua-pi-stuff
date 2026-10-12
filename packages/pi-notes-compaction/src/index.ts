@@ -54,6 +54,15 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 					entry.customType === "@howaboua/pi-stuff/changelog"
 				)
 					return true;
+				// PCC links the fresh worker before binding its shared notes family.
+				if (
+					entry.type === "custom" &&
+					entry.customType === "codex-agent-relationship"
+				)
+					return (
+						(entry.data as { threadId?: unknown } | undefined)?.threadId ===
+						ctx.sessionManager.getSessionId()
+					);
 				// Herdr activation persists its empty registry before first task delivery.
 				if (
 					entry.type === "custom" &&
@@ -168,10 +177,29 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 			);
 		}
 	});
-	pi.on("turn_end", (_event, ctx) => {
-		if (!lifecycle.active || lifecycle.fresh(ctx, lifecycle.runId)) return;
-		const reminder = lifecycle.windows.reminder(ctx);
-		return reminder ? { entries: [reminder] } : undefined;
+	pi.on("turn_end", (event, ctx) => {
+		if (!lifecycle.active) return;
+		const reminder = lifecycle.windows.reminder(
+			ctx,
+			event.message.role === "assistant" &&
+				!ctx.signal?.aborted &&
+				!["error", "length", "aborted"].includes(event.message.stopReason) &&
+				event.toolResults.length > 0 &&
+				pi.getActiveTools().includes("new_context")
+				? lifecycle.taskBoundaryReminder
+				: 0,
+			!lifecycle.fresh(ctx, lifecycle.runId),
+		);
+		return reminder
+			? {
+					entries: [
+						...event.entries,
+						windowDetails(reminder)?.kind === "task-boundary"
+							? (lifecycle.bridge?.prepareReminder?.(reminder) ?? reminder)
+							: reminder,
+					],
+				}
+			: undefined;
 	});
 	pi.on("context", (event, ctx) => {
 		if (!lifecycle.active) return;
@@ -240,8 +268,10 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 					settings: () => ({
 						normalCompaction: lifecycle.normalCompaction,
 						idleMinutes: lifecycle.idleMinutes,
+						taskBoundaryReminder: lifecycle.taskBoundaryReminder,
 					}),
 					save,
+					settingsPath,
 					prune,
 					status: () => {
 						const counts = store.status();

@@ -11,7 +11,7 @@ import { getCodexConversionConfigPath, readEffectiveCodexConversionConfig } from
 import { isAdapterRuntime, isCodeModeRuntime, resolveCodexRuntimePlanForState } from "../adapter/activation/runtime-plan.ts";
 import { CODE_MODE_TOOL_NAMES, NOTEBOOK_MODE_TOOL_NAMES } from "../adapter/activation/tool-set.ts";
 import type { AdapterState } from "../adapter/activation/state.ts";
-import { rewriteCodexProviderRequest, supportsCodexDeveloperMessages } from "../adapter/provider-request.ts";
+import { rewriteCodexProviderHeaders, rewriteCodexProviderRequest, supportsCodexDeveloperMessages } from "../adapter/provider-request.ts";
 import { isProviderContextExcludedMessage } from "../adapter/prompt/context-filter.ts";
 import { closeOpenAICodexKeepaliveWebSocketSession, closeOpenAICodexWebSocketSessions, prewarmOpenAICodexWebSocket, prewarmPreparedOpenAICodexWebSocket } from "../providers/openai-codex-custom-provider.ts";
 import { resetOpenAICodexWebSocketSessions } from "../providers/openai-codex/websocket.ts";
@@ -237,6 +237,7 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 					textVerbosity: config.openai.verbosity,
 					serviceTier: resolveFastModeServiceTier(config.openai.fast, model.id),
 				};
+				rewriteCodexProviderHeaders(options.headers!, ctx, { ...state, config, executionMode });
 				const originator = config.openai.harnessIdentifierHeader === "codex" ? "codex_cli_rs"
 					: config.openai.harnessIdentifierHeader ? PI_CODEX_CONVERSION_ORIGINATOR : "pi";
 				options.accessPrograms = await resolveDaybreakAccess(requestModel, options, config.openai.daybreak, preparedRequest?.body.model ?? model.id, originator);
@@ -372,8 +373,10 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 		epoch: number,
 		plan: CodexCacheKeepalivePlan,
 		completedOperations: number,
+		deadline: number | undefined,
 	) => {
 		if (plan.maxOperations !== undefined && completedOperations >= plan.maxOperations) return;
+		if (deadline !== undefined && Date.now() + plan.intervalMs > deadline) return;
 		if (cacheKeepaliveTimer) clearTimeout(cacheKeepaliveTimer);
 		diagnostics.sink()?.({
 			type: "keepalive",
@@ -383,7 +386,7 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 		});
 		cacheKeepaliveTimer = setTimeout(() => {
 			cacheKeepaliveTimer = undefined;
-			if (epoch !== cacheKeepaliveEpoch || !ctx.isIdle()) return;
+			if (epoch !== cacheKeepaliveEpoch || !ctx.isIdle() || (deadline !== undefined && Date.now() > deadline)) return;
 			const nextCompletedOperations = completedOperations + 1;
 			const requestSource = "captured";
 			diagnostics.sink()?.({ type: "keepalive", phase: "started", strategy: plan.strategy, requestSource });
@@ -396,12 +399,12 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 				if (epoch !== cacheKeepaliveEpoch || result.status === "aborted" || result.status === "skipped") return;
 				if (result.status === "failed") {
 					ctx.ui.notify(`Codex cache keepalive failed: ${result.error.message}`, "warning");
-					scheduleCacheKeepalive(ctx, epoch, plan, nextCompletedOperations);
+					scheduleCacheKeepalive(ctx, epoch, plan, nextCompletedOperations, deadline);
 					return;
 				}
 				const action = "generated-refresh";
 				diagnostics.sink()?.({ type: "keepalive", phase: "applied", strategy: plan.strategy, requestSource, action });
-				scheduleCacheKeepalive(ctx, epoch, plan, nextCompletedOperations);
+				scheduleCacheKeepalive(ctx, epoch, plan, nextCompletedOperations, deadline);
 			});
 		}, plan.intervalMs);
 		cacheKeepaliveTimer.unref?.();
@@ -410,7 +413,8 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 	const armCacheKeepalive = (ctx: CodexContext) => {
 		cancelCacheKeepalive();
 		const plan = resolveCodexCacheKeepalivePlan(ctx.model?.id, state.config.openai);
-		if (plan) scheduleCacheKeepalive(ctx, cacheKeepaliveEpoch, plan, 0);
+		if (plan) scheduleCacheKeepalive(ctx, cacheKeepaliveEpoch, plan, 0,
+			plan.maxDurationMs === undefined ? undefined : Date.now() + plan.maxDurationMs);
 	};
 
 	const runtime: CodexExtensionRuntime = {
@@ -551,7 +555,7 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 			}
 			return diagnostics.configure({
 				mode: state.config.openai.cacheDiagnostics,
-				active: ctx.model?.provider === "openai-codex",
+				active: ctx.model?.api === "openai-codex-responses",
 				ctx,
 				agentDir: dirname(getCodexConversionConfigPath()),
 				logName: cacheEnvironment.logName,

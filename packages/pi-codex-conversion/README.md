@@ -68,7 +68,7 @@ Custom-tool contract changes and removals, including promoted tools, are announc
 | General | Settings scope, execution and extension modes, providers, heavy prompt overwrite, time reminders |
 | Context | Continuity, notes storage, subagent sharing, compaction, V2 retention |
 | Tools | Auto reasoning (GPT-6), image descriptions, standalone tools |
-| OpenAI | Per-family Fast and Ultrafast modes, Daybreak, verbosity, transport, cache diagnostics, Responses Lite |
+| OpenAI | Per-family Fast and Ultrafast modes, Daybreak, verbosity, transport, diagnostics, Responses Lite |
 | Display | Statusline, tool rendering, Code Mode detail, note save markers, background shells |
 | Voice | LAN server, realtime behaviour, summarisation, dictation, shortcuts, prompt paths |
 | Usage | Spend by model and reset window, Codex limits, banked reset credits |
@@ -95,7 +95,7 @@ The first setting chooses **Global** or **This project**:
 - **Global:** `~/.pi/agent/pi-codex-conversion.json`.
 - **This project:** creates a snapshot at `.pi/pi-codex-conversion.json`. Every tab and **Edit config** targets it. Only trusted folders are read.
 - Switching back to Global removes project overrides. Without a project file, all settings inherit globally.
-- GPT-5.6 Luna cache keepalive remains global. GPT-5.6 Sol and Terra keepalive follows the project.
+- Luna cache keepalive remains global. Astra, Sol and Terra keepalive follows the project, across model versions.
 
 Fast Mode has independent settings for Astra, Sol, Terra and Luna, shared across each family's model versions. Choose off, on for priority processing, or Ultrafast. Existing boolean preferences still work. `PI_CODEX_FAST=1`, `0` or `ultrafast` overrides every family for one Pi process. Availability depends on the model and account. Ultrafast API-equivalent estimates use the published rates for GPT-6 Astra and GPT-6.1 Sol, six times Standard. Other models retain base-rate estimates without an unknown Ultrafast premium. These estimates are not subscription quota rates. Run `/reload` after editing config files by hand.
 
@@ -132,7 +132,7 @@ Choose under `/codex context`:
 | **History and notes storage** | Local · Tree · Remote | Using notes |
 | **Use notes for tree summaries** | On (default) · Off | Using notes |
 | **Share subagent context** | Off (default) · On | Using notes |
-| **New window after 25 minutes idle** | Off (default) · On | Using Notes and history on an eligible route |
+| **Idle rollover** | Off (default) · 5 · 15 · 25 · 55 minutes | Using Notes and history on an eligible route |
 | **Compaction method** | Pi summary · Codex V2 · Both | Using compaction |
 | **Preserved user messages (V2 only)** | 16k · 32k · 64k | Using Codex V2 or Both |
 
@@ -172,7 +172,7 @@ With **Notes and history**, `/compact` reuses notes from the last completed run 
 
 **Note save markers** in `/codex display` is off by default. When enabled, completed turns with confirmed saved notes get a **✓ Notes saved** marker. The next user prompt gets a **Notes** bookmark in `/tree` once it arrives. Select that prompt with **No summary** to return to the saved-notes boundary with your prompt back in the editor. Run plain `/compact` in **Notes and history**, then resubmit the prompt. A new window opens without another note-writing turn. Tree navigation preserves the checkpoint's original idle age. Existing user labels are preserved, and turning markers off keeps saved bookmarks.
 
-**New window after 25 minutes idle** is off by default and applies only to **Notes and history**, with Local, Tree or Remote storage. After at least 25 minutes since a run settled, the next prompt opens a window first only if the latest completed run saved fresh notes. Otherwise the prompt starts normally in the current window, without a checkpoint request. The original prompt and attachments proceed through normal preparation. Resume uses the recorded settlement time. Older runs without a recorded settlement do not trigger idle rollover. This is a cache optimization, not a cache-expiry check. If rollover fails, input and attachments remain pending. Submit another prompt to retry, or reload to cancel pending input.
+**Idle rollover** is off by default and applies only to **Notes and history**, with Local, Tree or Remote storage. Choose 5, 15, 25 or 55 minutes. After that duration since a run settled, the next prompt opens a window first only if the latest completed run saved fresh notes. Otherwise the prompt starts normally in the current window, without a checkpoint request. The original prompt and attachments proceed through normal preparation. Resume uses the recorded settlement time. Older runs without a recorded settlement do not trigger idle rollover. Existing `idleNotesRollover: true` configuration retains 25 minutes; `false` remains off. This is a cache optimisation, not a cache-expiry check. If rollover fails, input and attachments remain pending. Submit another prompt to retry, or reload to cancel pending input.
 
 Automatic overflow recovery compacts in the current window. Notes-only sessions use Pi summary for this emergency recovery. Other strategies use the selected method. Pi's automatic compaction must be enabled.
 
@@ -189,9 +189,9 @@ Remote sharing requires the same Codex account and Remote storage throughout. Lo
 <a name="cache-diagnostics"></a>
 
 <details>
-<summary><strong>Cache diagnostics</strong></summary>
+<summary><strong>Codex diagnostics</strong></summary>
 
-Set **Cache diagnostics** to **Status** or **Status + log** under `/codex openai`. Off by default.
+Set **Codex diagnostics** to **Status** or **Status + log** under `/codex openai`. Off by default. The existing `openai.cacheDiagnostics` configuration key and values are unchanged.
 
 Pi's footer shows cache percentage. The extension-status row explains transport and continuation:
 
@@ -213,9 +213,23 @@ Codex adapter V: low • notebook mode Codex Cache • HIT • WS delta
 
 A miss stays visible for three seconds before the row jumps to the latest state. **WebSocket continuation and prompt caching are separate.** A full request can still hit the cache.
 
-**Status + log** adds `• log` and writes to `~/.pi/agent/pi-codex-logs/<session-derived-name>.log`. Logs include transport, continuation, token counts, retries and allowlisted errors. They exclude prompts, messages, tool arguments, images, credentials, provider payloads and response IDs.
+**Status + log** adds `• log` and writes to `~/.pi/agent/pi-codex-logs/<session-derived-name>.log`. Logs cover response, prewarm and native compaction requests, cache and continuation decisions, model settings, routing-hint presence, parent-link presence, allowlisted worker classification, token usage, retries, fallback and safe failures. Parent identifiers and routing-header values are not recorded. `previous_response_present` is a boolean, not a response ID.
+
+Logs exclude prompts, messages, tool arguments, images, credentials, provider payloads and response IDs.
+
+On a reused WebSocket, request settings describe the current body but handshake headers are not resent. `request_headers_sent=false` makes that boundary explicit. A routing hint is advisory, not evidence of a routing decision.
+
+Local request IDs correlate retries and fallback without using server IDs. Timings use a monotonic clock. `send_ms`, `first_event_ms`, `first_visible_text_ms` and `completion_ms` are measured from the local transport attempt start, including connection acquisition. First visible text means receipt of the first nonempty text delta, not a screen-paint timestamp. Completion means receipt of a terminal response event. `request_elapsed_ms` spans provider preparation and recovery, not the harness's whole user turn. For reused prewarm readiness without a sent request, only elapsed time is available.
+
+`output_tokens_per_second` is completed provider-reported output tokens divided by the interval from send to completion. It includes reasoning tokens where the provider includes them in output usage. It is not visible-text speed or an inference-only rate. Non-generating prewarm and failed attempts report no throughput. Missing local boundaries are `null`.
+
+Optional backend timing fields retain their original names. Missing fields are `"missing"` and explicit backend nulls remain `null`. Backend delta counts are not token counts, engine counters are not billing usage, and `engine_service_total_ms` is not inference duration.
 
 Pi's generic cache warmer is disabled on Codex and Responses Lite because they cannot honor its one-token output cap and warming would disturb continuation. Native Codex uses separately configured, isolated keepalive. Other routes retain Pi's warmer.
+
+Keepalive is opt-in and sends quota-consuming requests while idle. In `/codex` under OpenAI, Astra, Sol and Terra offer Off or a 25 or 55 minute request interval for this project. Luna offers a global Off or 5, 10 or 15 minute duration, with a separate 2.5 or 4.5 minute request interval. Changing Luna's interval does not enable keepalive or extend its duration. Requests stop when that duration expires, and completed requests can reduce how many fit within it. Existing enabled settings retain their 25 minute or 2.5 minute interval.
+
+These are request intervals, not guaranteed cache lifetimes. Reports suggest around an hour for Astra and Sol and five minutes for Luna 6, but retention can vary. Keepalive intervals are independent of notes-managed idle rollover and task-boundary reminders.
 
 </details>
 
@@ -465,7 +479,9 @@ Subscribers receive independent structured clones and run in registration order,
 
 ### Context sharing
 
-The optional `context-sharing` API does not require Shepherdr:
+The optional `context-sharing` API does not require Shepherdr.
+
+Its optional `bindRelationship(ctx, relationship)` method links a fresh worker's native Pi thread to its parent before the first task. Parent and worker keep distinct session IDs. This linkage is independent of shared notes and the sharing setting. Shepherdr binds fresh spawns automatically with `subagentKind: "collab_spawn"`. Resume preserves linkage; forks do not inherit it. Check method availability on the live service. See the [parent and worker relationship contract](../../docs/extension-apis.md#parent-and-worker-relationships) for the signature and lifecycle.
 
 ```ts
 import { connectCodexContextSharing } from "@howaboua/pi-codex-conversion/context-sharing";

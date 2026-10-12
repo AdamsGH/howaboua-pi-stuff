@@ -44,7 +44,7 @@ export async function agentsHelp(
 			assign: "target message machine? blocking?",
 			attach: "target context board machine?",
 			detach: "target context board machine?",
-			read: "target machine? source? lines?",
+			read: "target machine? source=latest|visible|recent? lines?",
 			reply: "target extension id message machine?",
 		},
 		rules: {

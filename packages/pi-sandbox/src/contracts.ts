@@ -73,7 +73,9 @@ const serviceSchema = z.strictObject({
 				!("PORT" in env || "PUBLIC_URL" in env || "AMP_THREAD_ID" in env),
 			"PORT and PUBLIC_URL are managed; Amp identity is unavailable locally",
 		),
-	health: z.string().startsWith("/").optional(),
+	health: z
+		.union([z.string().startsWith("/"), z.literal("process")])
+		.optional(),
 	preview: previewSchema.default(false),
 	previews: z
 		.array(
@@ -322,7 +324,7 @@ export const HELP = {
 	},
 	profiles,
 	serviceConfig:
-		"Guest workspace/.sandbox.yaml is the independent editable declaration source. Ensure/restart reload it. Port optional and sticky; TCP readiness unless health GET path. Preview true or {url?: /, title?: service, description?}; previews additional {url,title,description?} links or {folder,links}. env supports ${services.NAME.publicURL}, starts dependencies first. platforms filters guest OS (linux). Setup deadline 20min; resume waits 10s then continues in background",
+		"Guest workspace/.sandbox.yaml is the independent editable declaration source. Ensure/restart reload it. Port optional and sticky; TCP readiness unless health is a GET path or process (running process only). Preview true or {url?: /, title?: service, description?}; previews additional {url,title,description?} links or {folder,links}. env supports ${services.NAME.publicURL}, starts dependencies first. platforms filters guest OS (linux). Setup deadline 20min; resume waits 10s then continues in background",
 	boundaries:
 		"Linux KVM or macOS HVF with QEMU. Guest requires Python 3 for commands and services. Terminal requires OpenSSH server and Gondolin SSH helper. Sparse virtual disk capacity, not host quota. Unauthenticated localhost HTTP/WebSocket previews, not public or remote-host links. Guest HTTP responses need Content-Length or chunked framing. No host mounts/auth. Pi exit leaves instances running, explicit stop/destroy required. Templates must contain no secrets. Empty network allowlist blocks outbound HTTP",
 };

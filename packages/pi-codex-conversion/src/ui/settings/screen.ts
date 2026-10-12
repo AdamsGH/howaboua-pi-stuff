@@ -1,6 +1,7 @@
 import {
 	CONFIG_DIR_NAME,
 	type ExtensionContext,
+	type ExtensionAPI,
 	getSettingsListTheme,
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
@@ -11,7 +12,7 @@ import {
 	truncateToWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import type { CodexConversionConfig, LunaCacheKeepaliveMinutes } from "../../adapter/activation/config.ts";
+import type { CodexConversionConfig, LunaCacheKeepaliveMinutes, LunaCacheKeepaliveIntervalMinutes, CacheKeepaliveIntervalMinutes } from "../../adapter/activation/config.ts";
 import type { CodexConversionConfigScope } from "../../adapter/activation/config-store.ts";
 import type { ExecutionMode } from "../../adapter/activation/execution-mode.ts";
 import type { CodexLanVoiceServerStatus } from "../../voice/lan/controller.ts";
@@ -26,14 +27,17 @@ import { openCodexConfigInExternalEditor } from "./config-editor.ts";
 import { buildConfigSettings, type ConfigSetting } from "./config-items.ts";
 import { SETTINGS_TABS, type SettingsTab } from "./tabs.ts";
 import { nativeDevicePicker } from "./native-device-picker.ts";
+import { contextWindowPicker } from "./context-window-picker.ts";
 import { createUsageTab, type UsageTabOptions } from "./usage-tab.ts";
 
 export interface CodexSettingsScreenOptions extends UsageTabOptions {
 	externalNotes?: boolean;
+	setModel: ExtensionAPI["setModel"];
+	waitForIdle: () => Promise<void>;
 	initialConfig: CodexConversionConfig;
 	onChange: (nextConfig: CodexConversionConfig) => boolean;
-	onGlobalLunaCacheKeepalive: (minutes: LunaCacheKeepaliveMinutes) => CodexConversionConfig | undefined;
-	onProjectCacheKeepalive: (enabled: boolean) => CodexConversionConfig | undefined;
+	onGlobalLunaCacheKeepalive: (minutes: LunaCacheKeepaliveMinutes, interval: LunaCacheKeepaliveIntervalMinutes) => CodexConversionConfig | undefined;
+	onProjectCacheKeepalive: (enabled: boolean, interval: CacheKeepaliveIntervalMinutes) => CodexConversionConfig | undefined;
 	initialTab?: SettingsTab | undefined;
 	configScope: {
 		current: () => CodexConversionConfigScope;
@@ -67,6 +71,7 @@ export async function openCodexSettingsScreen(
 		const usageTab = createUsageTab(ctx, options, () => tui.requestRender(), usageSignal);
 		let settingsList: SettingsList;
 		let devicePickerOpen = false;
+		let contextWindowPickerOpen = false;
 
 		const runEditConfig = async () => {
 			if (!options.onChange(draft)) {
@@ -145,6 +150,14 @@ export async function openCodexSettingsScreen(
 					ctx,
 					options.externalNotes,
 				),
+				...(activeTab === "context" ? [{ item: {
+					id: "contextWindows", label: "Context windows (openai-codex)", currentValue: "",
+					description: "Set local capacity per model in Pi models.json. Global, regardless of the Editing scope above.",
+					submenu: (_value: string, back: () => void) => {
+						contextWindowPickerOpen = true;
+						return contextWindowPicker(ctx, theme, options.setModel, options.waitForIdle, () => { contextWindowPickerOpen = false; back(); });
+					},
+				} }] : []),
 				...(activeTab === "voice"
 					? (["inputDevice", "outputDevice"] as const).map((key): ConfigSetting => ({
 							item: {
@@ -175,12 +188,13 @@ export async function openCodexSettingsScreen(
 				getSettingsListTheme(),
 				(id, value) => {
 					const definition = buildSettings().find(({ item }) => item.id === id);
-					if (definition?.action === "edit-config") {
+					if (definition?.action === "edit-config" || (id === "taskBoundaryReminder" && value === "custom (edit JSON)")) {
 						void runEditConfig();
 						return;
 					}
 					if (definition?.action === "project-cache-keepalive") {
-						const nextDraft = options.onProjectCacheKeepalive(value !== "off");
+						const interval = value === "off" ? draft.openai.cacheKeepaliveIntervalMinutes : value === "55 mins" ? 55 : 25;
+						const nextDraft = options.onProjectCacheKeepalive(value !== "off", interval);
 						if (nextDraft) {
 							draft = nextDraft;
 							for (const { item } of buildSettings()) list.updateValue(item.id, item.currentValue);
@@ -190,9 +204,12 @@ export async function openCodexSettingsScreen(
 						tui.requestRender();
 						return;
 					}
-					if (definition?.action === "global-luna-cache-keepalive") {
-						const minutes = (value === "off" ? 0 : Number.parseInt(value, 10)) as LunaCacheKeepaliveMinutes;
-						const nextDraft = options.onGlobalLunaCacheKeepalive(minutes);
+					if (definition?.action === "global-luna-cache-keepalive" || definition?.action === "global-luna-cache-keepalive-interval") {
+						const editingInterval = definition.action === "global-luna-cache-keepalive-interval";
+						const minutes = editingInterval ? draft.openai.lunaCacheKeepaliveMinutes
+							: (value === "off" ? 0 : Number.parseInt(value, 10)) as LunaCacheKeepaliveMinutes;
+						const interval = editingInterval ? (value === "4.5 mins" ? 4.5 : 2.5) : draft.openai.lunaCacheKeepaliveIntervalMinutes;
+						const nextDraft = options.onGlobalLunaCacheKeepalive(minutes, interval);
 						if (nextDraft) {
 							draft = nextDraft;
 							for (const { item } of buildSettings()) list.updateValue(item.id, item.currentValue);
@@ -272,9 +289,9 @@ export async function openCodexSettingsScreen(
 						theme,
 						options.configScope.current(),
 					);
-				if (activeTab === "context")
+				if (activeTab === "context" && !contextWindowPickerOpen)
 					settingsLines = withContextPortabilityWarning(settingsLines, theme, width);
-				if (activeTab === "context" && !options.externalNotes && draft.compaction.continuity === "notes")
+				if (activeTab === "context" && !contextWindowPickerOpen && !options.externalNotes && draft.compaction.continuity === "notes")
 					settingsLines = withSettingsDetails(settingsLines, [
 						theme.fg("dim", "  /compact asks the model to save notes and hand off to a new context window, instead of summarizing."),
 					]);
@@ -299,14 +316,14 @@ export async function openCodexSettingsScreen(
 						: []),
 					"",
 					...(hasSettingsList
-						? withSettingsFooter(settingsLines, theme)
+						? contextWindowPickerOpen ? settingsLines : withSettingsFooter(settingsLines, theme)
 						: [theme.fg("dim", formatFooter(activeTab))]),
 					rule(width, theme, "accent"),
 				].map((line) => truncateToWidth(line, width, ""));
 			},
 			invalidate: () => settingsList.invalidate(),
 			handleInput: (data: string) => {
-				if (devicePickerOpen) {
+				if (devicePickerOpen || contextWindowPickerOpen) {
 					settingsList.handleInput(data);
 					tui.requestRender();
 					return;

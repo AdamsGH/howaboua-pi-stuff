@@ -2,9 +2,12 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	type CodexConversionConfig,
 	normalizeHistoryStorage,
+	IDLE_NOTES_MINUTES_OPTIONS,
+	normalizeIdleNotesMinutes,
 	normalizeV2UserMessageRetention,
 	V2_USER_MESSAGE_RETENTION_OPTIONS,
 } from "../../adapter/activation/config.ts";
+import { TASK_BOUNDARY_PRESETS, taskBoundaryLabel } from "../../context-management/task-boundary.ts";
 import { isAdapterRuntime, resolveCodexRuntimePlan } from "../../adapter/activation/runtime-plan.ts";
 import { type ConfigSetting, setting, toggle } from "./config-items-shared.ts";
 
@@ -29,6 +32,17 @@ export function buildContextSettings(
 	const supportsV2 = isAdapterRuntime(plan) && plan.effectiveOpenAICodex;
 	const { continuity, historyStorage, method, v2UserMessageRetention } = config.compaction;
 	return [
+		...(!externalNotes ? [setting({
+			id: "taskBoundaryReminder", label: "Task-boundary reminder",
+			currentValue: taskBoundaryLabel(config.compaction.taskBoundaryReminder),
+			values: [...TASK_BOUNDARY_PRESETS.map(taskBoundaryLabel), "custom (edit JSON)"],
+			description: "Suggest a new window at a separate task boundary after this many used tokens, only with active capacity above 272k. Requires notes continuity. Custom: set compaction.taskBoundaryReminder to a positive whole token count in JSON; 0 is off.",
+		}, (value, current) => ({
+			...current,
+			compaction: { ...current.compaction,
+				taskBoundaryReminder: TASK_BOUNDARY_PRESETS.find(tokens => taskBoundaryLabel(tokens) === value) ?? current.compaction.taskBoundaryReminder,
+			},
+		}))] : []),
 		...(externalNotes ? [{ item: {
 			id: "externalNotes", label: "Notes continuity", currentValue: "Externally managed",
 			description: "The notes extension owns notes, history and window rollover. Saved PCC continuity settings are retained for sessions without it.",
@@ -94,15 +108,18 @@ export function buildContextSettings(
 				compaction: { ...current.compaction, method: value === "Both" ? "both" : value === "Codex V2" ? "v2" : "pi" },
 			}),
 		)]),
-		...(!externalNotes && continuity === "notes" && plan.contextManagement ? [toggle(
-			"idleNotesRollover",
-			"New window after 25 minutes idle",
-			config.compaction.idleNotesRollover,
-			(enabled, current) => ({
+		...(!externalNotes && continuity === "notes" && plan.contextManagement ? [setting(
+			{
+				id: "idleNotesRollover",
+				label: "Idle rollover",
+				currentValue: config.compaction.idleNotesRollover ? `${config.compaction.idleNotesRollover} minutes` : "Off",
+				values: IDLE_NOTES_MINUTES_OPTIONS.map(minutes => minutes ? `${minutes} minutes` : "Off"),
+				description: "Before the next prompt, open a window only if the last completed run saved fresh notes. Off by default. This is an idle policy, not a cache-expiry check.",
+			},
+			(value, current) => ({
 				...current,
-				compaction: { ...current.compaction, idleNotesRollover: enabled },
+				compaction: { ...current.compaction, idleNotesRollover: normalizeIdleNotesMinutes(Number.parseInt(value, 10)) },
 			}),
-			"Before the next prompt, open a window only if the last completed run saved fresh notes. Off by default. This is an idle policy, not a cache-expiry check.",
 		)] : []),
 		...((externalNotes || continuity !== "notes") && method !== "pi" ? [setting(
 			{

@@ -194,6 +194,8 @@ Child board calls use the owning Pi sessions and existing SSH connections, not a
 
 ## Shared notes and history
 
+With compatible Pi Codex Conversion on both ends, Shepherdr marks fresh spawned workers before their first task with their immediate parent's native Pi session ID and `subagentKind: "collab_spawn"`. Each worker keeps its own native session ID. This relationship works with shared notes disabled and does not grant notes access. Resume preserves it; forks and profiles selecting existing sessions do not acquire an inherited relationship. Older PCC versions without the optional capability retain ordinary delegation. The [extension API guide](../../docs/extension-apis.md#parent-and-worker-relationships) documents PCC's `bindRelationship` service contract for other orchestrators. Shepherdr owns transport, not a separate public relationship RPC API.
+
 With Pi Codex Conversion 3.0.40 or newer and notes-based continuity, enable **Share subagent context** under `/codex context` in the controller. It is off by default. Shared `spawn` gives each child a unique context identity before its first turn; `contextAgent` in the result identifies its notes and history. Shared nested spawns stay in the same family. Turning sharing off affects new spawns only; existing identity survives resume. `assign` and independently started agents remain unchanged. Older compatible Conversion versions keep ordinary delegation without sharing.
 
 Set `"share_context": false` in a profile to keep its new workers' notes and history independent even when controller sharing is enabled. Omission or `true` follows the controller setting, never turns sharing on itself. This separates context, not filesystem permissions or information included in the task.

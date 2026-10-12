@@ -8,6 +8,7 @@ import { injectPendingNativeWindowIntoPiCompactionRequest, rewriteCodexCompacted
 import { applyResponsesLiteRequest, RESPONSES_LITE_HEADER, type ResponsesLiteCompatibleBody } from "../providers/openai-codex/responses-lite.ts";
 import { usesRemoteHistoryNotes } from "../context-management/history-notes.ts";
 import { rewriteRemoteContextNamespaceTools } from "../context-management/namespace-tools.ts";
+import { rewriteRelationshipHeaders, rewriteRelationshipPayload } from "../context-management/agent-relationship.ts";
 
 function prepareCodexProviderRequest(payload: unknown, ctx: ExtensionContext, state: AdapterState) {
 	if (state.config.voiceFeaturesOnly) return undefined;
@@ -55,6 +56,7 @@ export function rewriteCodexProviderHeaders(
 		usesRemoteHistoryNotes(ctx, plan.contextManagementMode))
 	)
 		state.contextWindows.rewriteHeaders(headers, ctx);
+	if (isAdapterRuntime(plan) && plan.effectiveOpenAICodex) rewriteRelationshipHeaders(headers, ctx);
 }
 
 export async function rewriteCodexProviderRequest(payload: unknown, ctx: ExtensionContext, state: AdapterState, blockImages = false): Promise<unknown | undefined> {
@@ -75,7 +77,7 @@ export async function rewriteCodexProviderRequest(payload: unknown, ctx: Extensi
 		rewrittenPayload,
 		plan.transport === "responses-lite",
 	);
-	return finalPayload;
+	return plan.effectiveOpenAICodex ? rewriteRelationshipPayload(finalPayload, ctx) : finalPayload;
 }
 
 function isCodeModeCompatibleBody(value: unknown): value is ResponsesLiteCompatibleBody {

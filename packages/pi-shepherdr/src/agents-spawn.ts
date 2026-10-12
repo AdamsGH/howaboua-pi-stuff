@@ -123,6 +123,11 @@ export async function spawnAgent(
 		status: "starting",
 	});
 	const agentArgs = profileAgentArgs(profile, { targetLocal: runtime.local });
+	const relationship = sharedContext.prepareRelationship(
+		ctx,
+		runtime,
+		agentArgs,
+	);
 	const sharing =
 		profile.shareContext === false
 			? undefined
@@ -140,8 +145,10 @@ export async function spawnAgent(
 	let dispatch;
 	let shared: { agentName?: string; warning?: string } | undefined;
 	let boardAgent: string | undefined;
+	let relationshipWarning: string | undefined;
 	const blocking = shouldBlockAgentSpawn(profile.blocking, params.blocking);
 	try {
+		relationshipWarning = (await relationship?.accept(started.agent))?.warning;
 		boardAgent = await boardBinding?.accept(started.agent);
 		shared = await sharing?.accept(started.agent);
 		dispatch = await dispatchAgentWork(
@@ -197,6 +204,8 @@ export async function spawnAgent(
 							next: "Converse, do other work or reply now; completion/blockage arrives even after you reply. No polling or sleep waits",
 						}),
 		},
-		[dispatch.warning, shared?.warning].filter(Boolean).join("\n") || undefined,
+		[dispatch.warning, shared?.warning, relationshipWarning]
+			.filter(Boolean)
+			.join("\n") || undefined,
 	);
 }

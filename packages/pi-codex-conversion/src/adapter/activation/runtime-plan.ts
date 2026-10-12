@@ -3,7 +3,7 @@ import { supportsCodexReasoningUpdates } from "../reasoning-updates.ts";
 import { supportsViewImageInputs } from "../tool-support.ts";
 import { isGpt6ModelId, supportsResponsesLiteModel } from "../../providers/openai-codex/responses-lite-model.ts";
 import { isCodexLikeModel, isCodexTransportContext, isOpenAIResponsesContext, isResponsesContext } from "../prompt/codex-model.ts";
-import type { CodexConversionConfig, ContextManagementMode } from "./config.ts";
+import type { CodexConversionConfig, ContextManagementMode, IdleNotesMinutes } from "./config.ts";
 import { FAST_MODE_FAMILIES } from "./config-contract.ts";
 import type { ExecutionMode } from "./execution-mode.ts";
 import type { AdapterState } from "./state.ts";
@@ -36,7 +36,7 @@ interface RuntimePlanBase {
 	notesTreeHandoff: boolean;
 	shareSubagentContext: boolean;
 	compactOnRollover: boolean;
-	idleNotesRollover: boolean;
+	idleNotesRollover: IdleNotesMinutes;
 	autoReasoning: boolean;
 }
 
@@ -169,7 +169,7 @@ export function resolveCodexRuntimePlan(
 		notesTreeHandoff: false,
 		shareSubagentContext: false,
 		compactOnRollover: false,
-		idleNotesRollover: false,
+		idleNotesRollover: 0 as IdleNotesMinutes,
 		autoReasoning: false,
 	};
 	const extras = hasExtras(config)
@@ -195,7 +195,7 @@ export function resolveCodexRuntimePlan(
 	base.notesTreeHandoff = contextManagement && config.compaction.notesTreeHandoff;
 	base.shareSubagentContext = contextManagement && config.compaction.shareSubagentContext;
 	base.compactOnRollover = contextManagement && config.compaction.continuity === "notes-and-compaction";
-	base.idleNotesRollover = contextManagement && config.compaction.continuity === "notes" && config.compaction.idleNotesRollover;
+	base.idleNotesRollover = contextManagement && config.compaction.continuity === "notes" ? config.compaction.idleNotesRollover : 0;
 	base.nativeReplay = effectiveOpenAICodex;
 	const nativeCompaction = effectiveOpenAICodex && (externalNotes ? config.compaction.method !== "pi" : nativeCompactionConfigured(config.compaction));
 	base.autoReasoning = config.tools.autoReasoning && supportsCodexReasoningUpdates(ctx.model);
@@ -289,7 +289,7 @@ export function resolveCodexRuntimePlanForState(
 		notesTreeHandoff: false,
 		shareSubagentContext: false,
 		compactOnRollover: false,
-		idleNotesRollover: false,
+		idleNotesRollover: 0,
 		autoReasoning: false,
 	};
 }

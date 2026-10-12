@@ -88,7 +88,8 @@ export function createCodexTurnLifecycle(
 			})) return;
 			// Budget maintenance must not restart an assistant that has already answered.
 			if (state.contextTree.handoff.active || event.toolResults.length === 0) return;
-			const reminder = state.contextWindows.recordBudget(ctx, plan.contextManagement ? plan.contextManagementMode : "off");
+			const reminder = state.contextWindows.recordBudget(ctx, plan.contextManagement ? plan.contextManagementMode : "off",
+				undefined, pi.getActiveTools().includes("new_context") ? state.config.compaction.taskBoundaryReminder : 0);
 			if (reminder) return { entries: [...event.entries, reminder], continue: true };
 		},
 		input: async (event, ctx) => {
@@ -107,7 +108,7 @@ export function createCodexTurnLifecycle(
 			const identity = state.contextWindows.currentIdentity();
 			if (!checkpointInput && (state.contextKickoff.hasIdleInput || (inputPlan.idleNotesRollover && event.streamingBehavior === undefined &&
 				!state.contextTree.rolloverPending && !state.contextTree.handoff.active && !state.contextKickoff.pending &&
-				state.contextWindows.isIdleRolloverDue(ctx) && identity &&
+				state.contextWindows.isIdleRolloverDue(ctx, inputPlan.idleNotesRollover) && identity &&
 				hasFreshContextNotes(ctx.sessionManager.getBranch(), identity.currentWindowId, inputPlan.contextManagementMode, true)))) {
 				const result = await state.contextKickoff.prepareIdleInput(ctx, async () => {
 					if (!inputPlan.idleNotesRollover) throw new Error("Idle notes rollover is not active on this route");

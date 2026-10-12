@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { dirname, join } from "node:path";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { migrateCodexConversionConfigIfNeeded } from "./config-migration.ts";
-import { DEFAULT_CODEX_CONVERSION_CONFIG, normalizeCodexConversionConfig, type CodexConversionConfig, type LunaCacheKeepaliveMinutes } from "./config.ts";
+import { DEFAULT_CODEX_CONVERSION_CONFIG, normalizeCodexConversionConfig, type CodexConversionConfig, type LunaCacheKeepaliveMinutes, type LunaCacheKeepaliveIntervalMinutes, type CacheKeepaliveIntervalMinutes } from "./config.ts";
 import { readCodexCacheEnvironment } from "./cache-environment.ts";
 import { normalizeFastMode } from "./fast-mode.ts";
 
@@ -66,7 +66,7 @@ function writeConfigDocumentAtomic(configPath: string, document: Record<string, 
 function withoutProjectOnlyConfig(config: CodexConversionConfig): CodexConversionConfig {
 	return {
 		...config,
-		openai: { ...config.openai, cacheKeepalive: false },
+		openai: { ...config.openai, cacheKeepalive: false, cacheKeepaliveIntervalMinutes: 25 },
 	};
 }
 
@@ -74,6 +74,7 @@ function withoutProjectOnlyDocument(document: Record<string, unknown>): Record<s
 	const openai = isRecord(document["openai"]) ? { ...document["openai"] } : undefined;
 	if (!openai) return document;
 	delete openai["cacheKeepalive"];
+	delete openai["cacheKeepaliveIntervalMinutes"];
 	const next = { ...document };
 	if (Object.keys(openai).length > 0) next["openai"] = openai;
 	else delete next["openai"];
@@ -84,6 +85,7 @@ function withoutGlobalOnlyDocument(document: Record<string, unknown>): Record<st
 	const openai = isRecord(document["openai"]) ? { ...document["openai"] } : undefined;
 	if (!openai) return document;
 	delete openai["lunaCacheKeepaliveMinutes"];
+	delete openai["lunaCacheKeepaliveIntervalMinutes"];
 	const next = { ...document };
 	if (Object.keys(openai).length > 0) next["openai"] = openai;
 	else delete next["openai"];
@@ -151,7 +153,7 @@ export function hasFolderCodexConversionConfig(cwd: string, projectTrusted: bool
 	return [...OWNED_CONFIG_KEYS, ...LEGACY_OWNED_CONFIG_KEYS].some((key) => {
 		if (key !== "openai") return key in project;
 		const openai = isRecord(project["openai"]) ? project["openai"] : undefined;
-		return !!openai && Object.keys(openai).some((option) => option !== "cacheKeepalive");
+		return !!openai && Object.keys(openai).some((option) => option !== "cacheKeepalive" && option !== "cacheKeepaliveIntervalMinutes");
 	});
 }
 
@@ -198,6 +200,7 @@ export function setProjectCodexCacheKeepalive(
 	cwd: string,
 	projectTrusted: boolean,
 	enabled: boolean,
+	intervalMinutes?: CacheKeepaliveIntervalMinutes,
 ): { ok: true } | { ok: false; error: string } {
 	if (!projectTrusted) return { ok: false, error: "Trust this folder before changing project cache keepalive" };
 	const path = getProjectCodexConversionConfigPath(cwd);
@@ -208,6 +211,7 @@ export function setProjectCodexCacheKeepalive(
 		const openai = isRecord(document["openai"]) ? { ...document["openai"] } : {};
 		if (enabled) openai["cacheKeepalive"] = true;
 		else delete openai["cacheKeepalive"];
+		if (intervalMinutes !== undefined) openai["cacheKeepaliveIntervalMinutes"] = intervalMinutes;
 		if (Object.keys(openai).length > 0) document["openai"] = openai;
 		else delete document["openai"];
 		if (Object.keys(document).length === 0) rmSync(path, { force: true });
@@ -223,11 +227,13 @@ export function setProjectCodexCacheKeepalive(
 export function setGlobalCodexLunaCacheKeepalive(
 	minutes: LunaCacheKeepaliveMinutes,
 	globalConfigPath: string = getCodexConversionConfigPath(),
+	intervalMinutes?: LunaCacheKeepaliveIntervalMinutes,
 ): { ok: true } | { ok: false; error: string } {
 	const config = readCodexConversionConfig(globalConfigPath);
 	return writeCodexConversionConfig({
 		...config,
-		openai: { ...config.openai, lunaCacheKeepaliveMinutes: minutes },
+		openai: { ...config.openai, lunaCacheKeepaliveMinutes: minutes,
+			...(intervalMinutes !== undefined ? { lunaCacheKeepaliveIntervalMinutes: intervalMinutes } : {}) },
 	}, globalConfigPath);
 }
 
@@ -253,7 +259,11 @@ export function clearFolderCodexConversionConfig(
 	for (const key of [...OWNED_CONFIG_KEYS, ...LEGACY_OWNED_CONFIG_KEYS]) {
 		if (key === "openai" && isRecord(project[key])) {
 			const keepalive = project[key]["cacheKeepalive"];
-			const nextOpenAI = keepalive === true ? { cacheKeepalive: true } : {};
+			const interval = project[key]["cacheKeepaliveIntervalMinutes"];
+			const nextOpenAI = {
+				...(keepalive === true ? { cacheKeepalive: true } : {}),
+				...(interval === 25 || interval === 55 ? { cacheKeepaliveIntervalMinutes: interval } : {}),
+			};
 			if (Object.keys(nextOpenAI).length === 0) delete project[key];
 			else project[key] = nextOpenAI;
 			continue;

@@ -15,7 +15,7 @@ import type {
 	SessionBeforeCompactEvent,
 	SessionEntry,
 } from "@earendil-works/pi-coding-agent";
-import type { ContextManagementMode } from "../adapter/activation/config.ts";
+import type { ContextManagementMode, IdleNotesMinutes } from "../adapter/activation/config.ts";
 import { tryStartCodexPreparedIdleKickoff } from "../developer-messages.ts";
 import { loadHistoryNotesThreadHint } from "./history-notes.ts";
 import { hasFreshContextNotes } from "./saved-notes.ts";
@@ -114,8 +114,8 @@ export class CodexContextWindowManager {
 		});
 	}
 
-	isIdleRolloverDue(ctx: ExtensionContext, now = Date.now()): boolean {
-		if (!ctx.isIdle() || !this.identity || this.rolloverPending || this.rolloverCompaction) return false;
+	isIdleRolloverDue(ctx: ExtensionContext, minutes: IdleNotesMinutes, now = Date.now()): boolean {
+		if (!minutes || !ctx.isIdle() || !this.identity || this.rolloverPending || this.rolloverCompaction) return false;
 		const branch = ctx.sessionManager.getBranch();
 		// The final reply can precede retries and settled hooks. Only a persisted
 		// settlement on this selected run establishes idle age across resume.
@@ -131,7 +131,7 @@ export class CodexContextWindowManager {
 		if ("aborted" in data && data.aborted === true) return false;
 		return "protocol" in data && data.protocol === 1 && "windowId" in data && data.windowId === this.identity.currentWindowId &&
 			"completedEntryId" in data && data.completedEntryId === completed.id && "settledAt" in data &&
-			typeof data.settledAt === "number" && Number.isFinite(data.settledAt) && now - data.settledAt >= 25 * 60_000;
+			typeof data.settledAt === "number" && Number.isFinite(data.settledAt) && now - data.settledAt >= minutes * 60_000;
 	}
 
 	restore(entries: readonly SessionEntry[]): void {
@@ -318,10 +318,12 @@ export class CodexContextWindowManager {
 		ctx: ExtensionContext,
 		mode: ContextManagementMode,
 		contextTokens?: number,
+		taskBoundaryReminder = 0,
 	): CustomMessageEntryDraft | undefined {
 		if (mode === "off" || !this.identity || this.rolloverPending) return;
-		if (hasFreshContextNotes(ctx.sessionManager.getBranch(), this.identity.currentWindowId, mode, false)) return;
-		const reminder = this.budget.record(ctx, this.identity, contextTokens);
+		const reminder = (!hasFreshContextNotes(ctx.sessionManager.getBranch(), this.identity.currentWindowId, mode, false)
+			? this.budget.record(ctx, this.identity, contextTokens) : undefined)
+			?? (taskBoundaryReminder ? this.budget.recordTaskBoundary(ctx, this.identity, contextTokens, taskBoundaryReminder) : undefined);
 		if (reminder) return createContextWindowMessage(reminder.content, reminder.kind, this.identity);
 	}
 
@@ -434,7 +436,7 @@ export class CodexContextWindowManager {
 
 	recordCompaction(details: unknown): void {
 		if (!isContextWindowCompactionDetails(details)) {
-			this.budget.reset();
+			this.budget.resetThresholds();
 			// A real checkpoint supersedes any pending notes-only trim.
 			this.trimPendingWindowId = undefined;
 		} else if (details.windowId === this.trimPendingWindowId)

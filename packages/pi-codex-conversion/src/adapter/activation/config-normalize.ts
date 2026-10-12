@@ -1,3 +1,4 @@
+import { normalizeTaskBoundaryReminder } from "../../context-management/task-boundary.ts";
 import {
 	type CodexConversionConfig,
 	DEFAULT_CODEX_CONVERSION_CONFIG,
@@ -15,6 +16,7 @@ import {
 	normalizeCustomRustBinariesDir,
 	normalizeDictationShortcutMode,
 	normalizeHistoryStorage,
+	normalizeIdleNotesMinutes,
 	normalizeLunaCacheKeepaliveMinutes,
 	normalizeProviderList,
 	normalizeRealtimeV3Voice,
@@ -145,10 +147,8 @@ export function normalizeCodexConversionConfig(
 				compaction["shareSubagentContext"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.shareSubagentContext,
 			),
-			idleNotesRollover: normalizeBoolean(
-				compaction["idleNotesRollover"],
-				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.idleNotesRollover,
-			),
+			idleNotesRollover: normalizeIdleNotesMinutes(compaction["idleNotesRollover"]),
+			taskBoundaryReminder: normalizeTaskBoundaryReminder(compaction["taskBoundaryReminder"]),
 			method: normalizeCompactionMethod(compaction["method"])
 				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.method,
 			v2UserMessageRetention:
@@ -235,6 +235,8 @@ export function normalizeCodexConversionConfig(
 				openai["cacheKeepalive"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.openai["cacheKeepalive"],
 			),
+			lunaCacheKeepaliveIntervalMinutes: openai["lunaCacheKeepaliveIntervalMinutes"] === 4.5 ? 4.5 : 2.5,
+			cacheKeepaliveIntervalMinutes: openai["cacheKeepaliveIntervalMinutes"] === 55 ? 55 : 25,
 			proxyResponsesLite: normalizeBoolean(
 				openai["proxyResponsesLite"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.openai.proxyResponsesLite,

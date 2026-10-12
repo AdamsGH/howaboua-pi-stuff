@@ -41,7 +41,8 @@ const HISTORY_ACTIONS = [
 	"read_item",
 	"search_contents",
 ] as const;
-export const NOTES_USAGE = "await tools.notes() // help";
+export const NOTES_USAGE =
+	"await tools.notes({ action, ...args }) // no args: help; actions(required args): list_files_by_prefix(); read_file(path); search_contents(query); append_to_file(path,text); write_file(path,text)";
 export const HISTORY_USAGE = "await tools.history() // help";
 const STRING = Type.Optional(Type.String());
 const INTEGER = Type.Optional(Type.Integer({ minimum: 1 }));
@@ -526,6 +527,14 @@ export function createTools(
 						'Supply an action object: await tools.notes({ action: "read_file", path: "checkpoint" }); tools.notes() returns help',
 					);
 				const params = { ...args } as Record<string, unknown>;
+				if (
+					(params["action"] === "write_file" ||
+						params["action"] === "append_to_file") &&
+					"content" in params
+				) {
+					if (!("text" in params)) params["text"] = params["content"];
+					delete params["content"];
+				}
 				if (
 					params["action"] === "list_files_by_prefix" &&
 					params["max_files"] !== undefined

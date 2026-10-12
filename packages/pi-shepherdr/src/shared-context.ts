@@ -160,6 +160,14 @@ export class SharedAgentContext {
 			if (!service || !identity) return null;
 			return service.bind(ctx, "binding" in value ? value.binding : undefined);
 		}
+		if ("operation" in value && value.operation === "bind-relationship") {
+			return (
+				service?.bindRelationship?.(
+					ctx,
+					"relationship" in value ? value.relationship : undefined,
+				) ?? null
+			);
+		}
 		if (!identity || !service)
 			throw new Error("Context sharing is unavailable in this session");
 		const envelope = value as Partial<ContextEnvelope>;
@@ -288,6 +296,50 @@ export class SharedAgentContext {
 				"No unique live /root in this agent family; use find for an exact target",
 			);
 		return matches[0]!;
+	}
+
+	prepareRelationship(
+		ctx: ExtensionContext,
+		runtime: ConnectedMachine,
+		args: readonly string[],
+	) {
+		if (!this.getService()?.bindRelationship) return undefined;
+		// Session-selection profiles resume existing identities rather than creating workers.
+		if (
+			args.some((arg) =>
+				/^(?:--(?:session(?:-id)?|continue|resume|no-session|fork)(?:=|$)|-[cr]$)/.test(
+					arg,
+				),
+			)
+		)
+			return undefined;
+		const parentThreadId = ctx.sessionManager.getSessionId();
+		const relationship = { parentThreadId, subagentKind: "collab_spawn" };
+		return {
+			accept: async (agent: PaneInfo) => {
+				const file = sessionPath(agent);
+				if (!file) throw new Error("Spawned agent has no saved Pi session");
+				const value = await runtime.client.requestContext(
+					sessionContextPath(file),
+					{
+						operation: "bind-relationship",
+						relationship,
+					},
+				);
+				if (ctx.sessionManager.getSessionId() !== parentThreadId)
+					throw new Error("Controller session changed during spawn");
+				if (value === null)
+					return {
+						warning:
+							"Worker relationship marking requires Codex conversion on the target",
+					};
+				if (!isDeepStrictEqual(value, relationship))
+					throw new Error(
+						"Spawned agent did not adopt its parent relationship",
+					);
+				return undefined;
+			},
+		};
 	}
 
 	async prepare(

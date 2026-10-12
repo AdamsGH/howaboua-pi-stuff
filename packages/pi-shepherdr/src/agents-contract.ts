@@ -182,6 +182,13 @@ export function parseAgentsRequest(input: unknown): AgentsParams {
 	if (unknown.length > 0) {
 		throw new Error(`unknown ${action} field(s): ${unknown.join(", ")}`);
 	}
+	if (
+		action === "read" &&
+		"source" in request &&
+		!READ_SOURCES.some((source) => source === request["source"])
+	) {
+		throw new Error(`read source must be one of: ${READ_SOURCES.join(", ")}`);
+	}
 	if (!Check(AgentsRequest, request)) {
 		throw new Error(
 			`invalid ${action} request; call agents help for its contract`,

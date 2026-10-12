@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { withCodexDeveloperMessageDetails } from "../developer-messages.ts";
 import type { AdapterState } from "../adapter/activation/state.ts";
 import type { CodexExtensionRuntime } from "../extension/runtime.ts";
 import type { CodeModeRegistration } from "../tools/code-mode/tools.ts";
@@ -42,6 +43,7 @@ export function registerExternalNotesBridge(
 	const bridge: NotesBridge = {
 		...capabilities,
 		protocol: 1,
+		prepareReminder: withCodexDeveloperMessageDetails,
 		claim(owner) {
 			if (owner?.protocol !== 1 || owner.owner !== "pi-notes-compaction"
 				|| typeof owner.identity !== "function" || typeof owner.projectMessages !== "function"

@@ -5,6 +5,7 @@ import type { SerializedNotesResponse } from "./context-management/external-note
 export type { NoteSnapshotData } from "./context-management/local-notes.js";
 
 export type { ContextAgentBinding, ContextAgentIdentity } from "./context-management/agent-identity.js";
+export type { CodexAgentRelationship } from "./context-management/agent-relationship.js";
 
 export interface SharedContextRequest {
 	sessionId: string;
@@ -37,6 +38,8 @@ export type AttachmentNotesData = NoteSnapshotData | RemoteNoteReference;
 export interface ContextSharingService {
 	protocol: 1;
 	canCreateChild(ctx: ExtensionContext): boolean;
+	/** Bind a fresh worker before its first task, even with context sharing disabled. */
+	bindRelationship?(ctx: ExtensionContext, relationship: unknown): import("./context-management/agent-relationship.js").CodexAgentRelationship;
 	describe(ctx: ExtensionContext): ContextAgentIdentity | undefined;
 	verify(ctx: ExtensionContext): Promise<void>;
 	createChild(ctx: ExtensionContext, options: { name: string; routing?: unknown }): Promise<{
