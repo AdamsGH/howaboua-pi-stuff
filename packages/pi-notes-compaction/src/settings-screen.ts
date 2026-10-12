@@ -4,11 +4,13 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { SettingsList, truncateToWidth } from "@earendil-works/pi-tui";
 import { IDLE_MINUTES, type NotesSettings } from "./settings.js";
+import { TASK_BOUNDARY_PRESETS, taskBoundaryLabel } from "./task-boundary.js";
 
 export async function openNotesSettings(
 	ctx: ExtensionContext,
 	options: {
 		settings: () => NotesSettings;
+		settingsPath: string;
 		save: (settings: NotesSettings) => void;
 		status: () => string[];
 		prune: () => Promise<void>;
@@ -35,9 +37,12 @@ export async function openNotesSettings(
 							id: "taskBoundaryReminder",
 							label: "Task-boundary reminder",
 							description:
-								"Suggest a new window at a separate task boundary when an explicit context setting exceeds 400k.",
-							currentValue: settings.taskBoundaryReminder ? "on" : "off",
-							values: ["off", "on"],
+								"Suggest a separate-task rollover after this many used tokens, only with active capacity above 272k. Custom: edit taskBoundaryReminder in the notes settings JSON (whole tokens); 0 is off.",
+							currentValue: taskBoundaryLabel(settings.taskBoundaryReminder),
+							values: [
+								...TASK_BOUNDARY_PRESETS.map(taskBoundaryLabel),
+								"custom (edit JSON)",
+							],
 						},
 						{
 							id: "idle",
@@ -64,13 +69,30 @@ export async function openNotesSettings(
 							return;
 						}
 						const current = options.settings();
+						if (
+							id === "taskBoundaryReminder" &&
+							value === "custom (edit JSON)"
+						) {
+							ctx.ui.notify(
+								`Set taskBoundaryReminder to a positive whole token count in ${options.settingsPath}, then reload Pi. 0 is off.`,
+								"info",
+							);
+							list.updateValue(
+								id,
+								taskBoundaryLabel(current.taskBoundaryReminder),
+							);
+							return;
+						}
 						try {
 							if (id === "compact")
 								options.save({ ...current, normalCompaction: value === "on" });
 							else if (id === "taskBoundaryReminder")
 								options.save({
 									...current,
-									taskBoundaryReminder: value === "on",
+									taskBoundaryReminder:
+										TASK_BOUNDARY_PRESETS.find(
+											(tokens) => taskBoundaryLabel(tokens) === value,
+										) ?? current.taskBoundaryReminder,
 								});
 							else {
 								const idleMinutes = IDLE_MINUTES.find(
@@ -83,9 +105,7 @@ export async function openNotesSettings(
 							list.updateValue(
 								id,
 								id === "taskBoundaryReminder"
-									? current.taskBoundaryReminder
-										? "on"
-										: "off"
+									? taskBoundaryLabel(current.taskBoundaryReminder)
 									: id === "compact"
 										? current.normalCompaction
 											? "on"

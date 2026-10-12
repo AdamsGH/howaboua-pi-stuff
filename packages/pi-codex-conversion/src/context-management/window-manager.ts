@@ -318,12 +318,12 @@ export class CodexContextWindowManager {
 		ctx: ExtensionContext,
 		mode: ContextManagementMode,
 		contextTokens?: number,
-		taskBoundaryReminder = false,
+		taskBoundaryReminder = 0,
 	): CustomMessageEntryDraft | undefined {
 		if (mode === "off" || !this.identity || this.rolloverPending) return;
 		const reminder = (!hasFreshContextNotes(ctx.sessionManager.getBranch(), this.identity.currentWindowId, mode, false)
 			? this.budget.record(ctx, this.identity, contextTokens) : undefined)
-			?? (taskBoundaryReminder ? this.budget.recordTaskBoundary(ctx, this.identity, contextTokens) : undefined);
+			?? (taskBoundaryReminder ? this.budget.recordTaskBoundary(ctx, this.identity, contextTokens, taskBoundaryReminder) : undefined);
 		if (reminder) return createContextWindowMessage(reminder.content, reminder.kind, this.identity);
 	}
 

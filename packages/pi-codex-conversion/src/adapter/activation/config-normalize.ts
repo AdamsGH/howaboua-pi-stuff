@@ -1,3 +1,4 @@
+import { normalizeTaskBoundaryReminder } from "../../context-management/task-boundary.ts";
 import {
 	type CodexConversionConfig,
 	DEFAULT_CODEX_CONVERSION_CONFIG,
@@ -149,10 +150,7 @@ export function normalizeCodexConversionConfig(
 				compaction["idleNotesRollover"],
 				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.idleNotesRollover,
 			),
-			taskBoundaryReminder: normalizeBoolean(
-				compaction["taskBoundaryReminder"],
-				DEFAULT_CODEX_CONVERSION_CONFIG.compaction.taskBoundaryReminder,
-			),
+			taskBoundaryReminder: normalizeTaskBoundaryReminder(compaction["taskBoundaryReminder"]),
 			method: normalizeCompactionMethod(compaction["method"])
 				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.method,
 			v2UserMessageRetention:

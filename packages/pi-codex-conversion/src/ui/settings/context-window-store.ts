@@ -46,8 +46,10 @@ export function writeContextWindowOverride(modelId: string, tokens: number | und
 		override["contextWindow"] = tokens;
 		overrides[modelId] = override;
 	}
-	provider["modelOverrides"] = overrides;
-	providers["openai-codex"] = provider;
+	if (Object.keys(overrides).length > 0) provider["modelOverrides"] = overrides;
+	else delete provider["modelOverrides"];
+	if (Object.keys(provider).length > 0) providers["openai-codex"] = provider;
+	else delete providers["openai-codex"];
 	mkdirSync(dirname(path), { recursive: true });
 	const temporary = `${path}.${process.pid}.context-window.tmp`;
 	try {

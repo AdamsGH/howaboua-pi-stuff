@@ -6,7 +6,7 @@ export type IdleMinutes = (typeof IDLE_MINUTES)[number];
 export interface NotesSettings {
 	normalCompaction: boolean;
 	idleMinutes: IdleMinutes;
-	taskBoundaryReminder: boolean;
+	taskBoundaryReminder: number;
 }
 
 export function readSettings(path: string): NotesSettings {
@@ -18,7 +18,7 @@ export function readSettings(path: string): NotesSettings {
 			return {
 				normalCompaction: false,
 				idleMinutes: 0,
-				taskBoundaryReminder: false,
+				taskBoundaryReminder: 0,
 			};
 		throw error;
 	}
@@ -34,8 +34,12 @@ export function readSettings(path: string): NotesSettings {
 		);
 	const idleMinutes = "idleMinutes" in settings ? settings.idleMinutes : 0;
 	const taskBoundaryReminder =
-		"taskBoundaryReminder" in settings ? settings.taskBoundaryReminder : false;
-	if (typeof taskBoundaryReminder !== "boolean")
+		"taskBoundaryReminder" in settings ? settings.taskBoundaryReminder : 0;
+	if (
+		typeof taskBoundaryReminder !== "number" ||
+		!Number.isSafeInteger(taskBoundaryReminder) ||
+		taskBoundaryReminder < 0
+	)
 		throw new Error(
 			"Invalid task-boundary reminder setting. Save a setting in /notes, then reload Pi.",
 		);

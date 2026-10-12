@@ -181,12 +181,13 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 		if (!lifecycle.active) return;
 		const reminder = lifecycle.windows.reminder(
 			ctx,
-			lifecycle.taskBoundaryReminder &&
-				event.message.role === "assistant" &&
+			event.message.role === "assistant" &&
 				!ctx.signal?.aborted &&
 				!["error", "length", "aborted"].includes(event.message.stopReason) &&
 				event.toolResults.length > 0 &&
-				pi.getActiveTools().includes("new_context"),
+				pi.getActiveTools().includes("new_context")
+				? lifecycle.taskBoundaryReminder
+				: 0,
 			!lifecycle.fresh(ctx, lifecycle.runId),
 		);
 		return reminder
@@ -270,6 +271,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 						taskBoundaryReminder: lifecycle.taskBoundaryReminder,
 					}),
 					save,
+					settingsPath,
 					prune,
 					status: () => {
 						const counts = store.status();

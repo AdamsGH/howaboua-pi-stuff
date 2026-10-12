@@ -11,8 +11,8 @@ import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Box, Text, TruncatedText } from "@earendil-works/pi-tui";
 import type { WindowIdentity } from "./bridge.js";
 import {
-	hasExtendedContextOverride,
 	TASK_BOUNDARY_REMINDER,
+	taskBoundaryEligible,
 } from "./task-boundary.js";
 
 export const WINDOW_MESSAGE = "notes-compaction:window:v1";
@@ -241,7 +241,7 @@ export class Windows {
 	}
 	reminder(
 		ctx: ExtensionContext,
-		taskBoundaryReminder = false,
+		taskBoundaryReminder = 0,
 		checkpointReminder = true,
 	): CustomMessageEntryDraft | undefined {
 		const { remainingTokens, contextWindow, remainingPercent } =
@@ -261,8 +261,7 @@ export class Windows {
 			!kind &&
 			taskBoundaryReminder &&
 			!this.reminders.has(`${this.current.currentWindowId}:task-boundary`) &&
-			(ctx.getContextUsage()?.tokens ?? 0) >= 250_000 &&
-			hasExtendedContextOverride(ctx)
+			taskBoundaryEligible(ctx, taskBoundaryReminder)
 		)
 			kind = "task-boundary";
 		if (!kind) return;

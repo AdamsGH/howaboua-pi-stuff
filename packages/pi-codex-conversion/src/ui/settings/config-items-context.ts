@@ -5,6 +5,7 @@ import {
 	normalizeV2UserMessageRetention,
 	V2_USER_MESSAGE_RETENTION_OPTIONS,
 } from "../../adapter/activation/config.ts";
+import { TASK_BOUNDARY_PRESETS, taskBoundaryLabel } from "../../context-management/task-boundary.ts";
 import { isAdapterRuntime, resolveCodexRuntimePlan } from "../../adapter/activation/runtime-plan.ts";
 import { type ConfigSetting, setting, toggle } from "./config-items-shared.ts";
 
@@ -29,16 +30,17 @@ export function buildContextSettings(
 	const supportsV2 = isAdapterRuntime(plan) && plan.effectiveOpenAICodex;
 	const { continuity, historyStorage, method, v2UserMessageRetention } = config.compaction;
 	return [
-		...(!externalNotes ? [toggle(
-			"taskBoundaryReminder",
-			"Task-boundary reminder",
-			config.compaction.taskBoundaryReminder,
-			(enabled, current) => ({
-				...current,
-				compaction: { ...current.compaction, taskBoundaryReminder: enabled },
-			}),
-			"Suggest a new window at a separate task boundary when an explicit context setting exceeds 400k. Requires notes continuity.",
-		)] : []),
+		...(!externalNotes ? [setting({
+			id: "taskBoundaryReminder", label: "Task-boundary reminder",
+			currentValue: taskBoundaryLabel(config.compaction.taskBoundaryReminder),
+			values: [...TASK_BOUNDARY_PRESETS.map(taskBoundaryLabel), "custom (edit JSON)"],
+			description: "Suggest a new window at a separate task boundary after this many used tokens, only with active capacity above 272k. Requires notes continuity. Custom: set compaction.taskBoundaryReminder to a positive whole token count in JSON; 0 is off.",
+		}, (value, current) => ({
+			...current,
+			compaction: { ...current.compaction,
+				taskBoundaryReminder: TASK_BOUNDARY_PRESETS.find(tokens => taskBoundaryLabel(tokens) === value) ?? current.compaction.taskBoundaryReminder,
+			},
+		}))] : []),
 		...(externalNotes ? [{ item: {
 			id: "externalNotes", label: "Notes continuity", currentValue: "Externally managed",
 			description: "The notes extension owns notes, history and window rollover. Saved PCC continuity settings are retained for sessions without it.",

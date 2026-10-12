@@ -162,6 +162,8 @@ export function registerCodexCommand(
 			};
 		};
 		await openCodexSettingsScreen(ctx, {
+			setModel: model => pi.setModel(model),
+			waitForIdle: async () => { do { await ctx.waitForIdle(); } while (!ctx.isIdle()); },
 			externalNotes: Boolean(state.externalNotes),
 			initialConfig: readSelectedConfig(),
 			initialTab: tab,

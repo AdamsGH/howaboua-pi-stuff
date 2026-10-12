@@ -1,5 +1,5 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { hasExtendedContextOverride, TASK_BOUNDARY_REMINDER } from "./task-boundary.ts";
+import { taskBoundaryEligible, TASK_BOUNDARY_REMINDER } from "./task-boundary.ts";
 import {
 	CONTEXT_WINDOW_REMINDER_PERCENT,
 	CONTEXT_WINDOW_URGENT_PERCENT,
@@ -59,11 +59,11 @@ export class ContextWindowBudget {
 		ctx: ExtensionContext,
 		identity: ContextWindowIdentity,
 		contextTokens?: number,
+		threshold = 0,
 	): { content: string; kind: "task-boundary" } | undefined {
 		if (this.taskBoundaryWindows.has(identity.currentWindowId)) return;
 		const tokens = contextTokens ?? ctx.getContextUsage()?.tokens;
-		if (tokens === undefined || tokens === null || !Number.isFinite(tokens) ||
-			tokens < 250_000 || !hasExtendedContextOverride(ctx)) return;
+		if (!taskBoundaryEligible(ctx, threshold, tokens)) return;
 		this.taskBoundaryWindows.add(identity.currentWindowId);
 		return { content: TASK_BOUNDARY_REMINDER, kind: "task-boundary" };
 	}

@@ -78,7 +78,7 @@ export interface CodexConversionConfig {
 		notesTreeHandoff: boolean;
 		shareSubagentContext: boolean;
 		idleNotesRollover: boolean;
-		taskBoundaryReminder: boolean;
+		taskBoundaryReminder: number;
 		method: CompactionMethod;
 		v2UserMessageRetention: V2UserMessageRetention;
 	};
@@ -148,7 +148,7 @@ export const DEFAULT_CODEX_CONVERSION_CONFIG: CodexConversionConfig = {
 		notesTreeHandoff: true,
 		shareSubagentContext: false,
 		idleNotesRollover: false,
-		taskBoundaryReminder: false,
+		taskBoundaryReminder: 0,
 		method: "pi",
 		v2UserMessageRetention: 64,
 	},

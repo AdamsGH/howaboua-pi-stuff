@@ -1,6 +1,7 @@
 import {
 	CONFIG_DIR_NAME,
 	type ExtensionContext,
+	type ExtensionAPI,
 	getSettingsListTheme,
 	type Theme,
 } from "@earendil-works/pi-coding-agent";
@@ -31,6 +32,8 @@ import { createUsageTab, type UsageTabOptions } from "./usage-tab.ts";
 
 export interface CodexSettingsScreenOptions extends UsageTabOptions {
 	externalNotes?: boolean;
+	setModel: ExtensionAPI["setModel"];
+	waitForIdle: () => Promise<void>;
 	initialConfig: CodexConversionConfig;
 	onChange: (nextConfig: CodexConversionConfig) => boolean;
 	onGlobalLunaCacheKeepalive: (minutes: LunaCacheKeepaliveMinutes) => CodexConversionConfig | undefined;
@@ -152,7 +155,7 @@ export async function openCodexSettingsScreen(
 					description: "Set local capacity per model in Pi models.json. Global, regardless of the Editing scope above.",
 					submenu: (_value: string, back: () => void) => {
 						contextWindowPickerOpen = true;
-						return contextWindowPicker(ctx, theme, () => { contextWindowPickerOpen = false; back(); });
+						return contextWindowPicker(ctx, theme, options.setModel, options.waitForIdle, () => { contextWindowPickerOpen = false; back(); });
 					},
 				} }] : []),
 				...(activeTab === "voice"
@@ -185,7 +188,7 @@ export async function openCodexSettingsScreen(
 				getSettingsListTheme(),
 				(id, value) => {
 					const definition = buildSettings().find(({ item }) => item.id === id);
-					if (definition?.action === "edit-config") {
+					if (definition?.action === "edit-config" || (id === "taskBoundaryReminder" && value === "custom (edit JSON)")) {
 						void runEditConfig();
 						return;
 					}
