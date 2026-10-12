@@ -226,6 +226,11 @@ export function createHistoryNotesTools(
 			executionMode: "sequential",
 			prepareArguments(args) {
 				if (args && typeof args === "object" && !Array.isArray(args) &&
+					"action" in args && (args.action === "write_file" || args.action === "append_to_file") && "content" in args) {
+					const { content, ...rest } = args;
+					args = { ...rest, text: "text" in rest ? rest.text : content };
+				}
+				if (args && typeof args === "object" && !Array.isArray(args) &&
 					"action" in args && args.action === "list_files_by_prefix" && "max_files" in args) {
 					const { max_files, ...rest } = args;
 					args = { ...rest, max_results: "max_results" in rest ? rest.max_results : max_files };
