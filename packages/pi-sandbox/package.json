@@ -1,10 +1,19 @@
 {
 	"name": "@howaboua/pi-sandbox",
-	"private": true,
+	"publishConfig": {
+		"access": "public"
+	},
 	"version": "0.1.0",
 	"description": "Persistent local Gondolin environments and managed app previews for Pi",
 	"type": "module",
 	"license": "MIT",
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"sandbox",
+		"gondolin",
+		"microvm"
+	],
 	"engines": {
 		"node": ">=24.0.0"
 	},
@@ -16,6 +25,7 @@
 	"files": [
 		"index.ts",
 		"src",
+		"dist",
 		"README.md",
 		"LICENSE"
 	],
@@ -50,11 +60,12 @@
 		"typescript": "^7.0.2"
 	},
 	"scripts": {
+		"build": "bun build src/daemon.ts --target=node --packages=external --outdir=dist",
 		"check": "bun run lint && bun run typecheck",
 		"lint": "biome check .",
 		"format": "biome check --write .",
 		"typecheck": "tsgo --noEmit",
-		"prepack": "bun run check",
+		"prepack": "bun run check && bun run build",
 		"pack:dry": "npm pack --dry-run"
 	}
 }

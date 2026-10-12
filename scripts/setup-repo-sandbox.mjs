@@ -80,6 +80,7 @@ try {
 	]);
 	const archive = await readFile(join(temporary, "source.tgz"));
 	const digest = createHash("sha256").update(archive).digest("hex");
+	host("bun", ["run", "--cwd", "packages/pi-sandbox", "build"]);
 	const { run } = await import("../packages/pi-sandbox/src/client.ts");
 	const call = (action) => run({ name, ...action }, root);
 	const execute = async (cmd) => {
@@ -133,6 +134,7 @@ rm archive.b64 archive.tgz ${quote(`${home}/chunk`)}
 mkdir .install-tmp
 TMPDIR="$PWD/.install-tmp" bun install --frozen-lockfile
 bun run --cwd packages/pi-codex-conversion build
+bun run --cwd packages/pi-sandbox build
 rm -rf .install-tmp
 `);
 	await call({

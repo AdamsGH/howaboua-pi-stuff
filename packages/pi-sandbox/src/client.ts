@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from "node:child_process";
-import { closeSync, openSync } from "node:fs";
+import { closeSync, existsSync, openSync } from "node:fs";
 import {
 	copyFile,
 	mkdir,
@@ -148,6 +148,13 @@ async function launch(
 		throw new Error(
 			`Node.js 24 or newer is required, found ${nodeVersion}. Update Node.js, then retry start`,
 		);
+	const daemonPath = fileURLToPath(
+		new URL("../dist/daemon.js", import.meta.url),
+	);
+	if (!existsSync(daemonPath))
+		throw new Error(
+			"Sandbox controller is unavailable. Reinstall the package or build the source checkout, then retry start",
+		);
 	const lock = join(dir, "launch.lock");
 	try {
 		await mkdir(lock, { mode: 0o700 });
@@ -193,11 +200,11 @@ async function launch(
 		const env: NodeJS.ProcessEnv = {};
 		for (const key of ["PATH", "HOME", "XDG_CACHE_HOME", "TMPDIR"])
 			if (process.env[key]) env[key] = process.env[key];
-		const child = spawn(
-			"node",
-			[fileURLToPath(new URL("./daemon.ts", import.meta.url)), dir],
-			{ detached: true, stdio: ["ignore", fd, fd], env },
-		);
+		const child = spawn("node", [daemonPath, dir], {
+			detached: true,
+			stdio: ["ignore", fd, fd],
+			env,
+		});
 		closeSync(fd);
 		let failure: Error | undefined;
 		child.on("error", (error) => {

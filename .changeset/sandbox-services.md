@@ -2,4 +2,8 @@
 "@howaboua/pi-sandbox": patch
 ---
 
-Fixed managed-service shutdown and detection of exited processes. Added process-only readiness checks for services without a listening port.
+Added Pi Sandbox for persistent local Gondolin environments and app previews.
+
+- Named instances and reusable prepared templates retain guest files across disk checkpoints and reopen.
+- Managed services provide readiness checks, restart supervision and localhost HTTP and WebSocket previews.
+- Guest commands, file access and temporary SSH terminals work without forwarding host credentials.

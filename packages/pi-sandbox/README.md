@@ -6,16 +6,14 @@ Use these environments for your own commands, tools, and applications. The packa
 
 Special thanks to the Amp team for the inspiration, and to [Earendil](https://github.com/earendil-works) for Pi and Gondolin, the toolkit that makes this possible.
 
-This source-only package is not published to npm or included in the aggregate Pi packages. It uses local QEMU microVMs, not Amp infrastructure. Stop saves disk state. Reopen boots a new VM and restarts services. Memory, running processes, and browser connections do not resume.
+Install this package separately from the aggregate Pi packages. It uses local QEMU microVMs, not Amp infrastructure. Stop saves disk state. Reopen boots a new VM and restarts services. Memory, running processes, and browser connections do not resume.
 
 ## Start an environment
 
 Requires Node.js 24 or newer on `PATH`, QEMU and `qemu-img`, plus Linux KVM access or macOS HVF. Install those through your operating system's supported package manager. Linux x86_64 is integration-tested. macOS uses Gondolin's supported QEMU backend but has not been tested here.
 
 ```sh
-# From a checkout of this repository:
-bun install --frozen-lockfile
-pi install ./packages/pi-sandbox
+pi install npm:@howaboua/pi-sandbox
 ```
 
 Guest command execution and service management require Python 3. The example below also uses Python 3 as its HTTP server. Choose Gondolin assets containing the tools your environment needs. This package ships no images or image recipes. Set `image` in the YAML to use your own Gondolin assets directory.
@@ -143,7 +141,7 @@ bun run sandbox:setup --name review
 
 Add `--config sandbox.yaml` to create the environment first. The host needs Node 24 or newer and installed repository dependencies. The guest needs Bun, Node 24 or newer, Python 3, tar, make, g++, node-gyp, Herdr 0.9 or newer and `fd` on PATH. Provision node-gyp explicitly, for example with `npm install --global node-gyp@13.1.0`, rather than relying on Bun's first-use auto-install during native builds. Install `fd` through your guest's package manager because Pi's automatic download can fail behind the VM network gateway. The command installs Herdr's Pi integration through `herdr integration install pi` and loads it in the isolated agent directory. Allow the package registry and any build-download hosts required by the lockfile in your environment YAML.
 
-The command snapshots tracked working files, including edits and deletions, verifies the transferred archive, installs from the frozen lockfile and builds PCC. Untracked files and host credentials are not copied. Add new in-scope files to Git before refreshing. JJ workspaces use their working revision. Run the printed launch command in a guest Herdr pane. It uses the installed checkout's Pi with local PCC and Shepherdr packages in an isolated agent directory.
+The command snapshots tracked working files, including edits and deletions, verifies the transferred archive, installs from the frozen lockfile and builds PCC and the Sandbox controller. Untracked files and host credentials are not copied. Add new in-scope files to Git before refreshing. JJ workspaces use their working revision. Run the printed launch command in a guest Herdr pane. It uses the installed checkout's Pi with local PCC and Shepherdr packages in an isolated agent directory.
 
 Each successful refresh replaces the previous disposable candidate under the guest workspace's `pi-stuff-review` directory. Agent preferences and guest-owned authentication remain in its separate `agent` directory. Failed preparation leaves the selected candidate unchanged. Existing services are not restarted. Stop active review agents before refreshing, then use the printed command to load the new files. The guest is a snapshot, not a live mirror of the host.
 
