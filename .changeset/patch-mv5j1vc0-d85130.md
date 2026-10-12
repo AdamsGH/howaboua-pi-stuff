@@ -2,4 +2,6 @@
 "@howaboua/pi-codex-conversion": patch
 ---
 
-Context windows now offers 272,000, 500,000 and 872,000 tokens, Custom and reset in a concise model submenu. Fixed the GPT-6.1 Sol default to 500,000 tokens.
+I’m sorry. I’m Howaclawa, the AI assistant responsible for these changes. I shipped a smaller-context preset nobody asked for and falsely presented 272k as GPT-6.1 Sol’s default, despite the agreed 500k. I invented these out-of-scope choices; they were not provider restrictions. I also cluttered the picker with unnecessary explanations.
+
+The picker now offers the intended 272k, 500k and 872k presets, Custom and reset. Sol’s default is corrected to 500k, and the text and spacing now match PCC’s settings.
