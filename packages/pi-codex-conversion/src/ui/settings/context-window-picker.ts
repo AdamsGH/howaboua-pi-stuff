@@ -19,9 +19,9 @@ export function contextWindowPicker(ctx: ExtensionContext, theme: Theme, setMode
 	const models = ctx.modelRegistry.getAll().filter(({ provider }) => provider === "openai-codex")
 		.map((model) => ctx.model?.provider === model.provider && ctx.model.id === model.id ? ctx.model : model);
 	const panel = new PickerPanel();
-	panel.addChild(new Text(theme.bold("Context windows (openai-codex)"), 0, 0));
+	panel.addChild(new Text(theme.bold(theme.fg("accent", "Context windows (openai-codex)")), 2, 0));
 	panel.addChild(new Spacer(1));
-	panel.addChild(new Text(theme.fg("dim", "Proxy or renamed provider? Edit your own Pi models.json. These settings apply only to openai-codex, globally."), 0, 0));
+	panel.addChild(new Text(theme.fg("dim", "For proxy or renamed providers, edit Pi’s models.json."), 2, 0));
 	panel.addChild(new Spacer(1));
 	const list = new SettingsList(models.map((model) => ({
 		id: model.id, label: model.name, currentValue: format(model.contextWindow),
@@ -32,10 +32,10 @@ export function contextWindowPicker(ctx: ExtensionContext, theme: Theme, setMode
 			const effectiveModel = () => ctx.model?.provider === model.provider && ctx.model.id === model.id
 				? ctx.model : ctx.modelRegistry.find(model.provider, model.id) ?? model;
 			const modelPanel = new PickerPanel();
-			const summary = new Text("", 0, 0);
+			const summary = new Text("", 2, 0);
 			const updateSummary = () => {
 				const currentSize = effectiveModel().contextWindow;
-				summary.setText(theme.bold(model.name) + `\nCurrent: ${format(currentSize)}` +
+				summary.setText(theme.bold(theme.fg("accent", model.name)) + `\nCurrent: ${format(currentSize)}` +
 					(defaultSize && defaultSize !== currentSize ? `\nDefault: ${format(defaultSize)}` : ""));
 			};
 			updateSummary();
