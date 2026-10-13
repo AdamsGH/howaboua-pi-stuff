@@ -465,7 +465,16 @@ export async function registerSharedAgentContext(
 	);
 	let close: (() => Promise<void>) | undefined;
 	let unregister: (() => void) | undefined;
-	pi.on("session_start", async (_event, ctx) => {
+	const publish = async (ctx: ExtensionContext) => {
+		const file = ctx.sessionManager.getSessionFile();
+		if (file)
+			close = await listenContext(
+				sessionContextPath(file),
+				(request: unknown, signal: AbortSignal) =>
+					shared.handle(ctx, request, signal),
+			);
+	};
+	pi.on("session_start", async (event, ctx) => {
 		await close?.();
 		close = undefined;
 		unregister?.();
@@ -511,14 +520,10 @@ export async function registerSharedAgentContext(
 				},
 			),
 		);
-		const file = ctx.sessionManager.getSessionFile();
-		if (file)
-			close = await listenContext(
-				sessionContextPath(file),
-				(request: unknown, signal: AbortSignal) =>
-					shared.handle(ctx, request, signal),
-			);
+		if (event.reason !== "startup" && event.reason !== "reload")
+			await publish(ctx);
 	});
+	pi.on("resources_discover", async (_event, ctx) => publish(ctx));
 	pi.on("session_shutdown", async () => {
 		unregister?.();
 		await close?.();

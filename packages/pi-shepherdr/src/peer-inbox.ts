@@ -34,20 +34,25 @@ export function registerPeerInbox(
 ): void {
 	let close: (() => Promise<void>) | undefined;
 	let running = false;
+	const publish = async (ctx: ExtensionContext) => {
+		if (process.env["HERDR_ENV"] !== "1" || !process.env["HERDR_SOCKET_PATH"])
+			return;
+		close = await openInbox(pi, ctx, () => running, commands, fleet, catchup);
+	};
 	pi.on("before_agent_start", () => {
 		running = true;
 	});
 	pi.on("agent_settled", () => {
 		running = false;
 	});
-	pi.on("session_start", async (_event, ctx) => {
+	pi.on("session_start", async (event, ctx) => {
 		await close?.();
 		close = undefined;
 		running = false;
-		if (process.env["HERDR_ENV"] !== "1" || !process.env["HERDR_SOCKET_PATH"])
-			return;
-		close = await openInbox(pi, ctx, () => running, commands, fleet, catchup);
+		if (event.reason !== "startup" && event.reason !== "reload")
+			await publish(ctx);
 	});
+	pi.on("resources_discover", async (_event, ctx) => publish(ctx));
 	pi.on("session_shutdown", async () => {
 		await close?.();
 		close = undefined;
