@@ -81,12 +81,18 @@ function createExecTool(
 	return {
 		name: "exec",
 		exposure: "model-only",
+		executionMode: "sequential",
 		label: "Exec",
 		description: EXEC_DESCRIPTION,
 		promptSnippet: "Compose tools with JavaScript",
 		parameters: EXEC_PARAMETERS,
 		constrainedSampling: CODE_MODE_EXEC_CONSTRAINED_SAMPLING,
 		prepareLoadout: (loadout) => runtime.prepareLoadout(loadout),
+		reachesTools: ({ code }) => {
+			// Pi waits for named MCP servers before this cell snapshots its tools.
+			if (typeof code !== "string") return [];
+			return /\bALL_TOOLS\b/.test(code) ? "all" : (code.match(/\w+/g) ?? []);
+		},
 		async execute(id, params, signal, onUpdate, ctx) {
 			tracker.start(id);
 			const piToolScope = new PiToolCallScope(ctx, signal);
@@ -145,6 +151,7 @@ function createWaitTool(
 	return {
 		name: "wait",
 		exposure: "model-only",
+		executionMode: "sequential",
 		label: "Wait",
 		description: WAIT_DESCRIPTION,
 		promptSnippet: "Resume or terminate an exec cell",

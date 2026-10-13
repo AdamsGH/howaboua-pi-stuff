@@ -15,7 +15,7 @@ import type { CodexExtensionRuntime } from "./runtime.ts";
 import { discoverExternalNotesOwner } from "../context-management/external-notes-bridge.ts";
 import type { CodexToolRegistration } from "./tools.ts";
 import type { CodexUiController } from "./ui.ts";
-import { registerCodexDeveloperMessageBroker, updateCodexPreparedIdleKickoff } from "../developer-messages.ts";
+import { registerCodexDeveloperMessageBroker } from "../developer-messages.ts";
 import { registerCodexContextBriefingHost } from "../context-briefings.ts";
 import type { ExtensionHandler, SessionStartEvent, ModelSelectEvent, SessionBeforeSwitchEvent, SessionBeforeForkEvent, SessionBeforeTreeEvent, SessionTreeEvent, SessionShutdownEvent, SessionBeforeSwitchResult, SessionBeforeForkResult, SessionBeforeTreeResult } from "@earendil-works/pi-coding-agent";
 
@@ -38,7 +38,6 @@ export function createCodexSessionLifecycle(
 			activeContext &&
 			supportsCodexDeveloperMessages(activeContext, state),
 		),
-		() => activeContext?.isIdle() ?? false,
 	);
 	const unregisterExtensionToolRefresh = onCodeModeExtensionToolsRefresh(
 		pi,
@@ -66,7 +65,6 @@ export function createCodexSessionLifecycle(
 	return {
 		start: async (event, ctx) => {
 			discoverExternalNotesOwner(pi, state);
-			updateCodexPreparedIdleKickoff(pi, "session_reset");
 			activate(ctx);
 			state.notebookStatusMessageId = undefined;
 			ui.invalidateUsageStatus();
@@ -144,9 +142,8 @@ export function createCodexSessionLifecycle(
 			activate(ctx);
 			const previousMode = state.executionMode;
 			runtime.resetTransport(ctx.sessionManager.getSessionId());
-			// Internal rollover is still preparing the same claimed user kickoff.
+			// Internal rollover preserves the admission that requested it.
 			if (!state.externalNotes && state.contextTree.handleSessionTree(event)) return;
-			updateCodexPreparedIdleKickoff(pi, "session_reset");
 			state.notebookStatusMessageId = undefined;
 			if (previousMode === "notebook" || state.executionMode === "notebook") appendNotebookTreeEpoch(pi);
 			await codeMode.shutdownHost();
@@ -159,7 +156,6 @@ export function createCodexSessionLifecycle(
 			}
 		},
 		shutdown: async (_event, ctx) => {
-			updateCodexPreparedIdleKickoff(pi, "session_reset");
 			const failures: unknown[] = [];
 			pendingExtensionToolRefresh = false;
 			await runShutdownStep(failures, unregisterExtensionToolRefresh);

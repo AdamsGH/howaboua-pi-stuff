@@ -12,7 +12,7 @@ For the argument and token numbers, read [How I gave Pi 17 tools without loading
 pi install npm:@howaboua/pi-codex-conversion
 ```
 
-Requires Pi 1.1.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64.
+Requires Pi 1.2.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64.
 
 Open `/codex` after installation. Codex-like GPT models use the structured adapter by default.
 
@@ -255,7 +255,7 @@ Pi-callable extension tools automatically appear in `tools` and `ALL_TOOLS`, wit
 
 Configure MCP servers once in Pi's built-in MCP extension. Its callable tools and resource helpers use the same bridge. Pi's extension switches, tool restrictions and disabled servers are respected. Pi retains connection management, authentication, permissions and tool hooks; its native `codemode` extension is not required.
 
-`exec` does not wait for pending MCP connections. In Code and Notebook modes, missing-tool errors identify the MCP namespace when known, otherwise flag ambiguous name prefixes. If that server connects, retry in a new exec cell. If failures repeat, the agent should suggest disabling that specific server to you. This recovery guidance does not retry calls or disable servers.
+`exec` waits for pending MCP connections named in its source before starting the cell. Using `ALL_TOOLS` waits for all enabled servers. Names assembled dynamically or hidden in retained functions may not identify a server. Missing-tool errors identify the MCP namespace when known, otherwise flag ambiguous name prefixes. If that server connects, retry in a new exec cell. Repeated failures may require disabling that server. Calls are never retried automatically and servers are never disabled automatically.
 
 MCP discovery starts from Pi's server summaries. Read, `find` or `filter` the synchronous `ALL_TOOLS` array for complete usage, schemas and server instructions. Each cell's catalogue contains tools connected when that cell starts. Custom and deferred tools use the same catalogue, not another discovery tool.
 

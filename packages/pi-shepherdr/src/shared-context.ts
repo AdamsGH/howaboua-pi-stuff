@@ -63,7 +63,7 @@ export class SharedAgentContext {
 		this.getService = getService;
 		this.board = board;
 		this.attachment = new AgentAttachment(pi, board, getService);
-		pi.on("agent_start", () => {
+		pi.on("before_agent_start", () => {
 			this.running = true;
 		});
 		pi.on("agent_settled", () => {

@@ -33,6 +33,18 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 	const settingsPath = join(dir, "settings.json");
 	const store = new NotesStore(join(dir, "notes.sqlite"));
 	const lifecycle = new NotesLifecycle(pi, store);
+	const stopAdmission = pi.events.on(
+		"pi-notes-compaction:custom-turn-admission:v1",
+		(value) => {
+			const request = value as {
+				protocol?: number;
+				ctx: Parameters<NotesLifecycle["prepareCustomTurn"]>[0];
+				preparation?: Promise<void> | undefined;
+			};
+			if (request?.protocol === 1 && !request.preparation)
+				request.preparation = lifecycle.prepareCustomTurn(request.ctx);
+		},
+	);
 	const tools = createTools(pi, store, lifecycle);
 	let ownSource: string | undefined;
 	let unavailable: string | undefined;
@@ -157,8 +169,8 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 			ctx.ui.notify(`Notes continuity inactive: ${unavailable}`, "warning");
 		}
 	});
-	pi.on("before_agent_start", (_event, ctx) => {
-		if (lifecycle.active) lifecycle.beforeStart(ctx);
+	pi.on("before_agent_start", (event, ctx) => {
+		if (lifecycle.active) lifecycle.beforeStart(ctx, event);
 	});
 	pi.on("input", (event, ctx) =>
 		lifecycle.active ? lifecycle.input(event, ctx) : undefined,
@@ -237,6 +249,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 		lifecycle.active = false;
 		store.close();
 		stopOwner();
+		stopAdmission();
 	});
 
 	pi.registerCommand("notes", {

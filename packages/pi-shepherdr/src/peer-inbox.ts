@@ -6,7 +6,7 @@ import type {
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { acceptFocus, readFocus } from "./agents-focus.js";
-import { sendPolicyMessage, startPreparedIdleTurn } from "./delivery.js";
+import { sendPolicyMessage } from "./delivery.js";
 import { dispatchExtensionReply } from "./extension-reply.js";
 import type { AgentFleet } from "./fleet.js";
 import { getCurrentPane } from "./herdr.js";
@@ -34,7 +34,7 @@ export function registerPeerInbox(
 ): void {
 	let close: (() => Promise<void>) | undefined;
 	let running = false;
-	pi.on("agent_start", () => {
+	pi.on("before_agent_start", () => {
 		running = true;
 	});
 	pi.on("agent_settled", () => {
@@ -334,8 +334,7 @@ async function openInbox(
 						} else reply({ ok: true, command }, execute);
 						return;
 					}
-					if (idle && !command) startPreparedIdleTurn(pi, ctx, submit);
-					else submit();
+					submit();
 					reply({ ok: true, command });
 					return;
 				}
@@ -361,7 +360,6 @@ async function openInbox(
 						});
 						return;
 					}
-					const promptIdle = ctx.isIdle();
 					submitted = true;
 					sendPolicyMessage(
 						pi,
@@ -370,14 +368,9 @@ async function openInbox(
 							content: `${sender}\n${text}${notice.content}`,
 							display: true,
 						},
-						promptIdle
-							? { triggerTurn: false, deliverAs: "nextTurn" }
-							: { deliverAs: "steer" },
+						{ triggerTurn: true, deliverAs: "steer" },
 					);
 					notice.accepted();
-					// Keep arrivals out of history until idle rollover and preparation
-					// finish. The shared kickoff coalesces arrivals during preparation.
-					if (promptIdle) startPreparedIdleTurn(pi, ctx);
 					// Voice failure must not turn accepted delivery into a retry.
 					try {
 						announcePeerMessage(pi, {

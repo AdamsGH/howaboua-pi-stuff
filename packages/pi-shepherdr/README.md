@@ -14,7 +14,7 @@ With Pi Codex's compatible custom developer-message API active, asynchronous wor
 pi install npm:@howaboua/pi-shepherdr
 ```
 
-Requires Pi 1.1.0 or newer, Node.js 22.18 or newer, Herdr 0.9 or newer and the Herdr Pi integration:
+Requires Pi 1.2.0 or newer, Node.js 22.18 or newer, Herdr 0.9 or newer and the Herdr Pi integration:
 
 ```bash
 herdr integration install pi
@@ -120,7 +120,7 @@ Keys are command names without `/`; values are nonempty descriptions. Only the g
 
 Blocked commands return the built-in commands and currently registered, allowed extension commands. Commands return `commandSubmitted: true` without adding a task watch, even through `spawn` or `assign`. Submission does not confirm command success, except `/quit`, which waits for Pi to exit and its pane to close. Built-in commands other than `/quit` require an idle target. Skills and prompt templates keep their existing behavior.
 
-Idle messages start a prepared user turn. Messages arriving during a run use steering, promoted to developer messages when Pi Codex developer delivery is active. Otherwise they remain ordinary Pi custom messages.
+Idle messages start a custom-message turn through Pi’s complete preparation chain. Messages arriving during a run use steering, promoted to developer messages when Pi Codex developer delivery is active. Otherwise they remain ordinary Pi custom messages.
 
 ### Extension messages
 

@@ -1,3 +1,4 @@
 - Fresh-family binding may accept known startup UI metadata, never arbitrary custom entries. Startup changelogs consume global seen-version state even if spawn fails. Probe first-after-update binding with isolated unseen state.
 - PCC context-management/history-notes.ts and local-notes.ts define Notes compatibility. Compare executable calls/results. SQLite ownership and hybrid provenance do not authorise query or payload drift.
 - PCC may compact before Notes' hook. Consult owner policy before provider work, not after cancellation. Manual notes rollover waits for user input. Tool-requested rollover continues.
+- Custom kickoffs skip input hooks. The custom-turn-admission event owns pre-kickoff idle rollover; compaction must finish before Pi reserves startup as busy. Successor custom turns run every before_agent_start hook.

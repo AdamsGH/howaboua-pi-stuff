@@ -4,6 +4,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { NOTE_RECEIPT, noteReceipt } from "./notes.js";
 
+export const NOTES_RUN_ENTRY = "notes-compaction:run:v1";
+
 /** A receipt proves persistence. Current-run tool outcomes prove the checkpoint actually completed. */
 export function hasFreshNotes(
 	branch: readonly SessionEntry[],
@@ -14,7 +16,18 @@ export function hasFreshNotes(
 	const lastUser = branch.findLastIndex(
 		(entry) => entry.type === "message" && entry.message.role === "user",
 	);
-	const run = branch.slice(lastUser + 1);
+	// Custom kickoffs have no user message. Scope both receipts and tool outcomes
+	// to their native preparation boundary, not an earlier custom-only run.
+	const runStart = branch.findLastIndex(
+		(entry) =>
+			entry.type === "custom" &&
+			entry.customType === NOTES_RUN_ENTRY &&
+			entry.data &&
+			typeof entry.data === "object" &&
+			"runId" in entry.data &&
+			(!runId || entry.data.runId === runId),
+	);
+	const run = branch.slice(Math.max(lastUser, runStart) + 1);
 	const receipts = run
 		.filter(
 			(entry) => entry.type === "custom" && entry.customType === NOTE_RECEIPT,
