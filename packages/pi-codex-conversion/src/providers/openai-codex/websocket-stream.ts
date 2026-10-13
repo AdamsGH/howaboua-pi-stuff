@@ -20,7 +20,7 @@ export async function processWebSocketStream<TApi extends Api>(
 	body: ResponsesBody,
 	headers: Headers,
 	output: AssistantMessage,
-	stream: AssistantMessageEventStream,
+	stream: Pick<AssistantMessageEventStream, "push">,
 	model: Model<TApi>,
 	accountId: string,
 	onStart: () => void,

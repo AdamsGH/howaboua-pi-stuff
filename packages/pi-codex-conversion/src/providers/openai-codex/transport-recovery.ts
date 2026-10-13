@@ -365,7 +365,6 @@ export function createCodexTransportStream<TApi extends Api>(
 						recordUsage(diagnostics, lane, "websocket", output);
 						await deps.recordUsage?.(accountId, { ...model, id: body.model }, output.usage);
 						stream.push({ type: "done", reason: output.stopReason, message: output });
-						stream.end();
 						return;
 					} catch (error) {
 						timing.finish(effectiveOptions?.signal?.aborted ? "aborted" : "failed");
@@ -507,7 +506,6 @@ export function createCodexTransportStream<TApi extends Api>(
 						token: canonicalSessionToken,
 					});
 					stream.push({ type: "done", reason: output.stopReason, message: output });
-					stream.end();
 					return;
 				} catch (error) {
 					timing?.finish(effectiveOptions?.signal?.aborted ? "aborted" : "failed");
@@ -552,12 +550,11 @@ export function createCodexTransportStream<TApi extends Api>(
 				reason: (effectiveOptions?.signal?.aborted ? "aborted" : "error") as "aborted" | "error",
 				error: createErrorMessage(output, error, !!effectiveOptions?.signal?.aborted),
 			});
-			stream.end();
 		} finally {
 			await preconnect?.close();
 			deps.onStreamSettled?.();
 		}
 	})();
 
-	return stream;
+	return stream.output;
 }
