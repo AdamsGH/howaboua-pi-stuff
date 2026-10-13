@@ -1,7 +1,7 @@
 - Port model-native Codex prompts, tools, transport and context into Pi. Add features only for model fit, quota efficiency or Pi integration.
 - Preserve cache/continuation across prompt, tool, request, replay and transport changes.
 - Own GPT harness integration, not universal compatibility, UI, enterprise or a Pi fork. Route uncommon needs to overrides, extensions or forks.
-- Before tool output, recovery allows one WebSocket request plus five fresh full-request retries, then sticky SSE. Fall back immediately on 426 or close 1009. After exposing a tool call, stop on interruption; Pi retains tool panes across partial snapshots. Mark later session requests SSE instead of replaying orphan calls.
+- Recovery allows one WebSocket request plus five fresh full-request retries, then sticky SSE. Fall back immediately on 426 or close 1009. Pi cannot withdraw tool panes: keep tool calls out of partial snapshots until the whole response succeeds, including calls already finalised within an interrupted response.
 - Retry server_is_overloaded and slow_down across WebSocket/SSE within one three-minute budget. Honour HTTP/streamed retry delays using monotonic deadlines. Fail if advice exceeds the budget, including across fallback.
 - Before npm/publish/release/merge work, compare src/providers/openai-codex-custom-provider.ts with Pi's stock openai-codex-responses provider: requests, transport/headers, reasoning/tier, retries, termination and touched behaviour.
 - Structured mode uses flat TypeScript tools except native context namespaces. Code uses exec/wait. Notebook adds host-side notebook lifecycle control.

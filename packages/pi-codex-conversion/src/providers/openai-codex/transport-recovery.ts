@@ -5,7 +5,6 @@ import { resolveDaybreakAccess } from "./daybreak.ts";
 import {
 	appendAssistantMessageDiagnostic,
 	createAssistantMessageDiagnostic,
-	createAssistantMessageEventStream,
 	getDeclaredTools,
 	type Api,
 	type AssistantMessage,
@@ -37,6 +36,7 @@ import { hasRemoteCompactionV2Input, withRemoteCompactionV2Feature } from "../op
 import { captureCanonicalSessionToken, recordCanonicalSessionResponse, validateCanonicalSessionRequest } from "./session-continuity.ts";
 import { preconnectWebSocket } from "./websocket-session-cache.ts";
 import { osInfoReady } from "./node-runtime.ts";
+import { RecoverableCodexStream } from "./recoverable-stream.ts";
 
 export type CodexProviderRuntimeConfig = Pick<CodexConversionConfig, "openai" | "executionMode"> & Partial<Pick<CodexConversionConfig, "compaction">>;
 
@@ -92,14 +92,6 @@ function codexStreamMaxRetries(options: OpenAICodexStreamOptions | undefined): n
 		throw new Error(`Invalid maxRetries: ${String(configured)}`);
 	}
 	return Math.min(Math.floor(configured), MAX_STREAM_MAX_RETRIES);
-}
-
-function startsToolOutput(event: unknown): boolean {
-	if (!event || typeof event !== "object" || !("type" in event) || !("item" in event)) return false;
-	if (event.type !== "response.output_item.added" && event.type !== "response.output_item.done") return false;
-	const item = event.item;
-	return !!item && typeof item === "object" && "type" in item
-		&& (item.type === "function_call" || item.type === "custom_tool_call");
 }
 
 function retryAdviceRecoveryBudgetError(error: unknown): NonRetryableProviderError {
@@ -215,7 +207,7 @@ export function createCodexTransportStream<TApi extends Api>(
 			...(nativeCompactionConfigured(runtimeConfig?.compaction) ? { headers: withRemoteCompactionV2Feature(options.headers) } : {}),
 		}
 		: { transport: effectiveTransport, grammarToolInputProperties };
-	const stream = createAssistantMessageEventStream();
+	const stream = new RecoverableCodexStream();
 
 	(async () => {
 		let output = createInitialAssistantMessage(model);
@@ -338,11 +330,8 @@ export function createCodexTransportStream<TApi extends Api>(
 			if (transport !== "sse") {
 				validateWebSocketTimeoutOptions(effectiveOptions);
 				for (let attempt = 0; attempt <= streamMaxRetries; attempt++) {
-					// Pi replaces assistant snapshots, but retains tool panes by call ID.
-					// Never replay a response after exposing a tool call to the host.
 					if (attempt > 0) output = createInitialAssistantMessage(model);
 					let websocketStarted = false;
-					let toolOutputStarted = false;
 					const timing = requestTiming.start(lane, "websocket");
 					try {
 						await processWebSocketStream(
@@ -360,13 +349,7 @@ export function createCodexTransportStream<TApi extends Api>(
 									stream.push({ type: "start", partial: output });
 								}
 							},
-							{
-								...effectiveOptions,
-								onProviderStreamEvent: (event, eventModel) => {
-									toolOutputStarted ||= startsToolOutput(event);
-									return effectiveOptions.onProviderStreamEvent?.(event, eventModel);
-								},
-							},
+							effectiveOptions,
 							deps.turnState,
 							diagnostics ? { lane, attempt: timing.attempt, record: diagnostics, requestId: requestTiming.requestId, timing } : undefined,
 							{
@@ -406,14 +389,6 @@ export function createCodexTransportStream<TApi extends Api>(
 								requestBytes: new TextEncoder().encode(bodyJson).byteLength,
 							}),
 						);
-						if (toolOutputStarted && (retryableWebSocketError || immediateFallback)) {
-							recordWebSocketSseFallback(effectiveOptions.sessionId);
-							recordFailure("websocket", error);
-							const recovery = effectiveOptions.sessionId
-								? "Retry your request; the next attempt will use the alternate connection."
-								: "Retry your request.";
-							throw new NonRetryableProviderError(`The response was interrupted while composing tool calls. Unfinished calls were discarded. ${recovery}`);
-						}
 						if (!immediateFallback && retryableWebSocketError && attempt < streamMaxRetries && !overloadBudgetExhausted && !adviceBudgetExhausted) {
 							diagnostics?.({
 								type: "retry",
@@ -463,7 +438,6 @@ export function createCodexTransportStream<TApi extends Api>(
 			const sseIdleTimeoutMs = normalizeTimeoutMs(effectiveOptions?.timeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS, "timeoutMs");
 			for (let attempt = 0; attempt <= streamMaxRetries; attempt++) {
 				if (attempt > 0) output = createInitialAssistantMessage(model);
-				let toolOutputStarted = false;
 				const responseItems: unknown[] = [];
 				let timing: CodexAttemptTiming | undefined;
 				try {
@@ -511,7 +485,6 @@ export function createCodexTransportStream<TApi extends Api>(
 							...effectiveOptions,
 							onOutputItemDone: (item) => responseItems.push(item),
 							onProviderStreamEvent: (event, eventModel) => {
-								toolOutputStarted ||= startsToolOutput(event);
 								timing?.observe(event);
 								return effectiveOptions?.onProviderStreamEvent?.(event, eventModel);
 							},
@@ -552,10 +525,6 @@ export function createCodexTransportStream<TApi extends Api>(
 							requestBytes: new TextEncoder().encode(bodyJson).byteLength,
 						}),
 					);
-					if (toolOutputStarted && retryable) {
-						recordFailure("sse", error);
-						throw new NonRetryableProviderError("The response was interrupted while composing tool calls. Unfinished calls were discarded. Retry your request.");
-					}
 					if (retryable && attempt < streamMaxRetries && !overloadBudgetExhausted && !adviceBudgetExhausted) {
 						diagnostics?.({
 							type: "retry",
