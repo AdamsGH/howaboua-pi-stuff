@@ -5,6 +5,7 @@ import { resolveDaybreakAccess } from "./daybreak.ts";
 import {
 	appendAssistantMessageDiagnostic,
 	createAssistantMessageDiagnostic,
+	createAssistantMessageEventStream,
 	getDeclaredTools,
 	type Api,
 	type AssistantMessage,
@@ -36,7 +37,6 @@ import { hasRemoteCompactionV2Input, withRemoteCompactionV2Feature } from "../op
 import { captureCanonicalSessionToken, recordCanonicalSessionResponse, validateCanonicalSessionRequest } from "./session-continuity.ts";
 import { preconnectWebSocket } from "./websocket-session-cache.ts";
 import { osInfoReady } from "./node-runtime.ts";
-import { RecoverableCodexStream } from "./recoverable-stream.ts";
 
 export type CodexProviderRuntimeConfig = Pick<CodexConversionConfig, "openai" | "executionMode"> & Partial<Pick<CodexConversionConfig, "compaction">>;
 
@@ -207,7 +207,7 @@ export function createCodexTransportStream<TApi extends Api>(
 			...(nativeCompactionConfigured(runtimeConfig?.compaction) ? { headers: withRemoteCompactionV2Feature(options.headers) } : {}),
 		}
 		: { transport: effectiveTransport, grammarToolInputProperties };
-	const stream = new RecoverableCodexStream();
+	const stream = createAssistantMessageEventStream();
 
 	(async () => {
 		let output = createInitialAssistantMessage(model);
@@ -545,6 +545,7 @@ export function createCodexTransportStream<TApi extends Api>(
 			}
 		} catch (error) {
 			if (!diagnosticsFailureRecorded) recordFailure(effectiveTransport === "sse" ? "sse" : "websocket", error);
+			output.content = output.content.filter(block => block.type !== "toolCall");
 			stream.push({
 				type: "error",
 				reason: (effectiveOptions?.signal?.aborted ? "aborted" : "error") as "aborted" | "error",
@@ -556,5 +557,5 @@ export function createCodexTransportStream<TApi extends Api>(
 		}
 	})();
 
-	return stream.output;
+	return stream;
 }
