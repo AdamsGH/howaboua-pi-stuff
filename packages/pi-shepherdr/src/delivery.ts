@@ -6,13 +6,9 @@ import type {
 import type {
 	CodexDeveloperCustomMessage,
 	CodexDeveloperMessageOptions,
-	trySendCodexDeveloperCustomMessage,
+	CodexDeveloperMessageRequest,
 } from "@howaboua/pi-codex-conversion/developer-messages";
 
-const senders = new WeakMap<
-	ExtensionAPI,
-	typeof trySendCodexDeveloperCustomMessage
->();
 const contexts = new WeakMap<ExtensionAPI, ExtensionContext>();
 const PENDING_MESSAGE = "herdr-pending-message";
 interface PendingMessage {
@@ -22,21 +18,7 @@ interface PendingMessage {
 	};
 	queued?: boolean;
 }
-const PACKAGE = "@howaboua/pi-codex-conversion";
-const MODULE = `${PACKAGE}/developer-messages`;
-
-export async function registerDeveloperDelivery(
-	pi: ExtensionAPI,
-): Promise<void> {
-	try {
-		const api = await import(
-			"@howaboua/pi-codex-conversion/developer-messages"
-		);
-		if (typeof api.trySendCodexDeveloperCustomMessage === "function")
-			senders.set(pi, api.trySendCodexDeveloperCustomMessage);
-	} catch (error) {
-		if (!isUnavailable(error)) throw error;
-	}
+export function registerDeveloperDelivery(pi: ExtensionAPI): void {
 	pi.on("session_start", (event, ctx) => {
 		contexts.set(pi, ctx);
 		const entries = ctx.sessionManager.getEntries();
@@ -94,7 +76,7 @@ export async function registerDeveloperDelivery(
 		)
 			return;
 		if (
-			senders.get(pi)?.(
+			trySendDeveloperMessage(
 				pi,
 				{
 					customType: "herdr-agent-message",
@@ -145,9 +127,9 @@ export function sendPolicyMessage(
 	message: CodexDeveloperCustomMessage,
 	options: CodexDeveloperMessageOptions,
 ): void {
-	if (senders.get(pi)?.(pi, message, options)) return;
+	if (trySendDeveloperMessage(pi, message, options)) return;
 	const ctx = contexts.get(pi);
-	if (options.triggerTurn && ctx) {
+	if (options.deliverAs !== "nextTurn" && options.triggerTurn && ctx) {
 		const request: {
 			protocol: 1;
 			ctx: ExtensionContext;
@@ -183,34 +165,24 @@ export function sendPolicyMessage(
 	pi.sendMessage(message, options);
 }
 
-function isUnavailable(error: unknown): boolean {
-	if (
-		!error ||
-		typeof error !== "object" ||
-		!("code" in error) ||
-		!("message" in error) ||
-		typeof error.message !== "string"
-	)
-		return false;
-	if (
-		error.code === "ERR_MODULE_NOT_FOUND" ||
-		error.code === "MODULE_NOT_FOUND"
-	) {
-		const missing = error.message.match(
-			/Cannot find (?:package|module) ['"]([^'"]+)['"]/,
-		)?.[1];
-		const normalized = missing?.replaceAll("\\", "/").replace(/\.js$/, "");
-		return (
-			missing === PACKAGE ||
-			normalized === MODULE ||
-			normalized?.endsWith(`/${MODULE}`) === true
-		);
-	}
-	return (
-		(error.code === "ERR_PACKAGE_PATH_NOT_EXPORTED" ||
-			error.code === "ERR_UNSUPPORTED_DIR_IMPORT") &&
-		(error.message.includes(MODULE) ||
-			(error.message.includes("Package subpath './developer-messages'") &&
-				error.message.includes(PACKAGE)))
+function trySendDeveloperMessage(
+	pi: ExtensionAPI,
+	message: CodexDeveloperCustomMessage,
+	options: CodexDeveloperMessageOptions,
+): boolean {
+	const request: CodexDeveloperMessageRequest = {
+		protocol: 1,
+		content: message.content,
+		message,
+		options,
+	};
+	// The broker's receipt is discovery: no PCC installation or active adapter is required.
+	pi.events.emit(
+		"@howaboua/pi-codex-conversion.developer-custom-message/v1",
+		request,
 	);
+	if (!request.outcome) return false;
+	if (request.outcome.ok) return true;
+	if (request.outcome.reason === "unavailable") return false;
+	throw new Error(request.outcome.error);
 }

@@ -50,7 +50,8 @@ type DeveloperMessageOutcome =
 	| { ok: true }
 	| { ok: false; reason: "unavailable" | "delivery"; error: string };
 
-interface DeveloperMessageRequest {
+/** Event-bus request for integrations that must work without loading PCC. */
+export interface CodexDeveloperMessageRequest {
 	protocol: 1;
 	content: string;
 	options?: CodexDeveloperMessageOptions | undefined;
@@ -100,7 +101,7 @@ function dispatchCodexDeveloperMessage(
 	if (typeof content !== "string" || content.trim() === "")
 		throw new Error("Codex developer message content cannot be empty");
 	validateOptions(options);
-	const request: DeveloperMessageRequest = {
+	const request: CodexDeveloperMessageRequest = {
 		protocol: 1,
 		content,
 		...(options ? { options } : {}),
@@ -126,23 +127,19 @@ export function registerCodexDeveloperMessageBroker(
 		// Pi reloads extensions in place and retains nextTurn. A replacement
 		// AgentSession has an empty queue; recover accepted, unconsumed entries.
 		const entries = ctx.sessionManager.getEntries();
+		const pending = entries.flatMap(entry => entry.type === "custom" && entry.customType === PENDING_DEVELOPER_MESSAGE_TYPE
+			? [readPendingDeveloperMessage(entry.data)] : []);
 		const delivered = new Set(entries.flatMap(entry => entry.type === "custom_message"
 			? [developerMessageId(entry)] : []));
-		const queued = new Set(entries.flatMap(entry => {
-			if (entry.type !== "custom" || entry.customType !== PENDING_DEVELOPER_MESSAGE_TYPE) return [];
-			const pending = readPendingDeveloperMessage(entry.data);
-			return pending.queued ? [developerMessageId(pending.message)] : [];
-		}));
+		const queued = new Set(pending.filter(data => data.queued).map(data => developerMessageId(data.message)));
 		let restored = false;
-		for (const entry of entries) {
-			if (entry.type !== "custom" || entry.customType !== PENDING_DEVELOPER_MESSAGE_TYPE) continue;
-			const pending = readPendingDeveloperMessage(entry.data);
-			const id = developerMessageId(pending.message);
-			if (pending.sessionId !== ctx.sessionManager.getSessionId() || delivered.has(id) ||
+		for (const data of pending) {
+			const id = developerMessageId(data.message);
+			if (data.sessionId !== ctx.sessionManager.getSessionId() || delivered.has(id) ||
 				(event.reason === "reload" && queued.has(id))) continue;
-			pi.sendMessage(pending.message, { deliverAs: "nextTurn", triggerTurn: false });
+			pi.sendMessage(data.message, { deliverAs: "nextTurn", triggerTurn: false });
 			delivered.add(id);
-			if (!pending.queued) pi.appendEntry(PENDING_DEVELOPER_MESSAGE_TYPE, { ...pending, protocol: 1, queued: true });
+			if (!data.queued) pi.appendEntry(PENDING_DEVELOPER_MESSAGE_TYPE, { ...data, protocol: 1, queued: true });
 			restored = true;
 		}
 		if (restored) ctx.ui.notify("Pending developer messages restored. Send a message to continue.", "warning");
@@ -170,21 +167,19 @@ export function registerCodexDeveloperMessageBroker(
 				display: true,
 				details: metadata,
 			};
-			if (deferred) {
+			// nextTurn only queues context, even when the caller also sets triggerTurn.
+			const preparation = !deferred && value.options?.triggerTurn && currentContext
+				? admitCustomTurn(pi, currentContext) : undefined;
+			if (deferred || preparation) {
 				if (!currentContext) throw new Error("Developer message delivery requires a started session");
-				// Metadata is durable but not conversation: it cannot stale Notes
-				// before admission. The eventual custom-message ID proves consumption.
+				// Journal metadata is not conversation: it cannot stale Notes before admission.
 				pi.appendEntry(PENDING_DEVELOPER_MESSAGE_TYPE, {
-					protocol: 1, sessionId: currentContext.sessionManager.getSessionId(), message,
+					protocol: 1, sessionId: currentContext.sessionManager.getSessionId(), message, queued: deferred,
 				});
 			}
-			const preparation = value.options?.triggerTurn && currentContext
-				? admitCustomTurn(pi, currentContext) : undefined;
-			if (preparation) {
-				if (!currentContext) throw new Error("Developer message delivery requires a started session");
+			if (preparation && currentContext) {
 				const ctx = currentContext;
 				const sessionId = ctx.sessionManager.getSessionId();
-				pi.appendEntry(PENDING_DEVELOPER_MESSAGE_TYPE, { protocol: 1, sessionId, message, queued: false });
 				void preparation.then(() => {
 					if (currentContext !== ctx || ctx.sessionManager.getSessionId() !== sessionId)
 						throw new Error("Session changed before message delivery");
@@ -265,7 +260,7 @@ export function isCodexDeveloperMessageDetails(
 
 function isDeveloperMessageRequest(
 	value: unknown,
-): value is DeveloperMessageRequest {
+): value is CodexDeveloperMessageRequest {
 	if (
 		!value ||
 		typeof value !== "object" ||

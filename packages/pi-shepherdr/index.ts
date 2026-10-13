@@ -23,7 +23,7 @@ export default async function shepherdrExtension(
 	registerPackageChangelog(pi);
 
 	await installAgentProfiles();
-	await registerDeveloperDelivery(pi);
+	registerDeveloperDelivery(pi);
 	const peerCommands = createPeerCommands(pi);
 	const fleet = new AgentFleet(pi);
 	registerFocusArrivals(pi);
