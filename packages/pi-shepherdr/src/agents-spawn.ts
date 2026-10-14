@@ -123,7 +123,7 @@ export async function spawnAgent(
 		status: "starting",
 	});
 	const agentArgs = profileAgentArgs(profile, { targetLocal: runtime.local });
-	const relationship = sharedContext.prepareRelationship(
+	const relationship = sharedContext.spawns.prepareRelationship(
 		ctx,
 		runtime,
 		agentArgs,
@@ -131,7 +131,7 @@ export async function spawnAgent(
 	const sharing =
 		profile.shareContext === false
 			? undefined
-			: await sharedContext.prepare(ctx, runtime, name, agentArgs);
+			: await sharedContext.spawns.prepare(ctx, runtime, name, agentArgs);
 	const boardBinding = await board.prepare(ctx, runtime, name, agentArgs);
 	const started = await startAgent(
 		runtime.client,

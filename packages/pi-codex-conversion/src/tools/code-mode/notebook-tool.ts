@@ -88,6 +88,7 @@ export function registerNotebookTool(pi: ExtensionAPI, runtime: SharedCodeModeRu
 	pi.registerTool({
 		name: "notebook",
 		exposure: "model-only",
+		executionMode: "sequential",
 		label: "Notebook",
 		description: "Manage persistent notebook state",
 		parameters: NOTEBOOK_PARAMETERS,

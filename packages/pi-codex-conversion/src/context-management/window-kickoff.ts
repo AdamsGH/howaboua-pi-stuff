@@ -120,13 +120,18 @@ export class CodexContextWindowKickoff {
 		}
 		if (!ctx.isIdle()) return false;
 		this.continuation = undefined;
-		const input = pending.input ?? "Continue.";
-		this.onContinue?.(input);
-		// Only settled user input enters Pi's complete before_agent_start chain.
-		pi.sendUserMessage(
-			input,
-			pending.input === undefined ? undefined : { expandPromptTemplates: true },
-		);
+		if (pending.input !== undefined) {
+			this.onContinue?.(pending.input);
+			// Queued user input retains template expansion and attachments.
+			pi.sendUserMessage(pending.input, { expandPromptTemplates: true });
+		} else {
+			this.onContinue?.("Continue.");
+			pi.sendMessage({
+				customType: "codex-context-continuation",
+				content: "Continue from the saved context notes.",
+				display: false,
+			}, { triggerTurn: true });
+		}
 		return true;
 	}
 }

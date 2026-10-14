@@ -42,7 +42,7 @@ Required boundaries in the current source:
 
 Normal compaction output belongs exclusively to Pi and PCC. This package does not port V2, copy encrypted compaction checkpoints or persist its own compaction records.
 
-`beforeWindow(ctx, signal?)` is optional. PCC can checkpoint Notebook and reset owned transport/window state there. It must fail before a new marker is appended if preparation fails. A rollover continuation is a settled **user** kickoff. Both the checkpoint and successor must run the complete `input` and `before_agent_start` chain, not a captured prompt or developer-message turn.
+`beforeWindow(ctx, signal?)` is optional. PCC can checkpoint Notebook and reset owned transport/window state there. It must fail before a new marker is appended if preparation fails. A rollover continuation is a settled custom-message kickoff through Pi 1.2’s complete `before_agent_start` chain. Checkpoint requests use custom kickoffs too; held user input retains its original `input` admission. The `pi-notes-compaction:custom-turn-admission:v1` event admits idle custom kickoffs before Pi reserves startup as busy, so rollover compaction can finish first.
 
 ## Code and Notebook
 

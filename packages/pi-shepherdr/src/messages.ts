@@ -7,7 +7,7 @@ import {
 import { Box, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import type { BoardBinding } from "@howaboua/pi-agent-board/integration";
 import { activityTask } from "./activity.js";
-import { sendPolicyMessage, startPreparedIdleTurn } from "./delivery.js";
+import { sendPolicyMessage } from "./delivery.js";
 import { getCurrentPane, getSnapshot } from "./herdr.js";
 import type { HerdrConnection } from "./herdr-client.js";
 import { readExtensionMessage } from "./remote/shepherdr-session.mjs";
@@ -510,7 +510,7 @@ function agentEvent(options: AgentEventOptions): {
 
 export function injectAgentEvent(
 	pi: ExtensionAPI,
-	ctx: ExtensionContext,
+	_ctx: ExtensionContext,
 	options: AgentEventOptions,
 ): void {
 	const tools = pi.getActiveTools();
@@ -521,10 +521,7 @@ export function injectAgentEvent(
 			tools.includes("code") ||
 			tools.includes("notebook"),
 	});
-	const idle = ctx.isIdle();
-	const delivery = idle
-		? { triggerTurn: false, deliverAs: "nextTurn" as const }
-		: { deliverAs: "steer" as const };
+	const delivery = { triggerTurn: true, deliverAs: "steer" as const };
 	sendPolicyMessage(
 		pi,
 		{
@@ -535,7 +532,6 @@ export function injectAgentEvent(
 		},
 		delivery,
 	);
-	if (idle) startPreparedIdleTurn(pi, ctx);
 	announceAgentEvent(
 		pi,
 		`pi-shepherdr:${message.details.machine}:${message.details.paneId}`,

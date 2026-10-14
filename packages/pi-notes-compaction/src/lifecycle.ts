@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type {
 	AgentSettledEvent,
+	BeforeAgentStartEvent,
 	ExtensionAPI,
 	ExtensionContext,
 	InputEvent,
@@ -13,7 +14,7 @@ import {
 	prepareBranchEntries,
 } from "@earendil-works/pi-coding-agent";
 import type { NotesBridge } from "./bridge.js";
-import { hasFreshNotes } from "./fresh-notes.js";
+import { hasFreshNotes, NOTES_RUN_ENTRY } from "./fresh-notes.js";
 import { noteHints, sessionRef } from "./notes.js";
 import type { IdleMinutes } from "./settings.js";
 import type { NotesStore } from "./store.js";
@@ -28,8 +29,7 @@ import {
 interface Checkpoint {
 	sessionId: string;
 	windowId: string;
-	prompt: string;
-	admitted: boolean;
+	requestId: string;
 	runId: string | undefined;
 	outcome: "completed" | "aborted" | "error" | undefined;
 }
@@ -56,6 +56,7 @@ export class NotesLifecycle {
 	private checkpoint: Checkpoint | undefined;
 	private held: HeldInput | undefined;
 	private rollover: Rollover | undefined;
+	private customAdmission: Promise<void> | undefined;
 	private cancelledCompact:
 		| {
 				sessionId: string;
@@ -74,6 +75,7 @@ export class NotesLifecycle {
 		return this.bridge?.agentName?.(ctx) ?? "/root";
 	}
 	reset(ctx?: ExtensionContext): void {
+		this.customAdmission = undefined;
 		this.checkpoint = undefined;
 		this.rollover = undefined;
 		this.cancelledCompact = undefined;
@@ -123,10 +125,34 @@ export class NotesLifecycle {
 			);
 		}
 	}
-	beforeStart(ctx: ExtensionContext): void {
+	beforeStart(ctx: ExtensionContext, event: BeforeAgentStartEvent): void {
 		this.initialize(ctx);
 		this.runId = randomUUID();
-		if (this.checkpoint?.admitted) this.checkpoint.runId = this.runId;
+		this.pi.appendEntry(NOTES_RUN_ENTRY, { runId: this.runId });
+		if (
+			this.checkpoint &&
+			event.messageType === "custom" &&
+			event.message.customType === "notes-compaction:checkpoint:v1" &&
+			(event.message.details as { requestId?: string } | undefined)
+				?.requestId === this.checkpoint.requestId
+		)
+			this.checkpoint.runId = this.runId;
+	}
+	prepareCustomTurn(ctx: ExtensionContext): Promise<void> | undefined {
+		if (this.customAdmission) return this.customAdmission;
+		if (!this.active || !this.idleDue(ctx) || !this.fresh(ctx)) return;
+		const sessionId = ctx.sessionManager.getSessionId();
+		const preparation = this.roll(ctx, false)
+			.then(() => {
+				if (!this.active || sessionId !== ctx.sessionManager.getSessionId())
+					throw new Error("Session changed during custom kickoff admission");
+			})
+			.finally(() => {
+				if (this.customAdmission === preparation)
+					this.customAdmission = undefined;
+			});
+		this.customAdmission = preparation;
+		return preparation;
 	}
 	outcome(outcome: "completed" | "aborted" | "error"): void {
 		if (this.checkpoint) this.checkpoint.outcome = outcome;
@@ -165,7 +191,15 @@ export class NotesLifecycle {
 			triggerTurn: false,
 		});
 		this.windows.current = ids;
-		if (triggerTurn) this.pi.sendUserMessage("Continue.");
+		if (triggerTurn)
+			this.pi.sendMessage(
+				{
+					customType: "notes-compaction:continuation",
+					content: "Continue from the saved context notes.",
+					display: false,
+				},
+				{ triggerTurn: true },
+			);
 	}
 	private async roll(
 		ctx: ExtensionContext,
@@ -204,12 +238,11 @@ export class NotesLifecycle {
 	private startCheckpoint(ctx: ExtensionContext, instructions?: string): void {
 		if (!ctx.isIdle() || !this.windows.current || this.checkpoint)
 			throw new Error("A checkpoint cannot start until the session settles");
-		const prompt = `Save the requested context checkpoint. Checkpoint request: ${randomUUID()}`;
+		const requestId = randomUUID();
 		this.checkpoint = {
 			sessionId: ctx.sessionManager.getSessionId(),
 			windowId: this.windows.current.currentWindowId,
-			prompt,
-			admitted: false,
+			requestId,
 			runId: undefined,
 			outcome: undefined,
 		};
@@ -217,13 +250,12 @@ export class NotesLifecycle {
 			this.pi.sendMessage(
 				{
 					customType: "notes-compaction:checkpoint:v1",
+					details: { requestId },
 					content: `<context_window_reminder>\nContext checkpoint requested. Save the current state with notes, then finish your response. The new window opens after this run settles. Do not call new_context. If saving fails, report the failure without rolling over.\n</context_window_reminder>${instructions?.trim() ? `\n\nCheckpoint guidance:\n${instructions}` : ""}`,
 					display: true,
 				},
-				{ triggerTurn: false },
+				{ triggerTurn: true },
 			);
-			// A settled user kickoff runs ALL input and before_agent_start handlers.
-			this.pi.sendUserMessage(prompt);
 		} catch (error) {
 			this.checkpoint = undefined;
 			throw error;
@@ -286,16 +318,6 @@ export class NotesLifecycle {
 			else this.held = undefined;
 			admit?.({ action: "continue" });
 			return { action: "handled" };
-		}
-		const checkpoint = this.checkpoint;
-		if (
-			checkpoint &&
-			!checkpoint.admitted &&
-			event.source === "extension" &&
-			event.text === checkpoint.prompt
-		) {
-			checkpoint.admitted = true;
-			return;
 		}
 		if (!this.held && (!this.idleDue(ctx) || !this.fresh(ctx))) return;
 		const held =
