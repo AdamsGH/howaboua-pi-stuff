@@ -75,7 +75,7 @@ export function createBridgeSessionRuntime(binaryPath?: () => string | undefined
 	}
 
 	async function poll(session: BridgeExecSession, hooks: BridgeSessionHooks, waitMs = 0, maxBytes?: number): Promise<void> {
-		if (!hooks.isOwned(session)) return;
+		if (!hooks.isOwned(session) || session.finalized) return;
 		const response = await bridge.request<BridgeReadResponse>({
 			op: "read",
 			process_id: session.processId,
