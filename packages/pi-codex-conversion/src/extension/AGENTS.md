@@ -2,4 +2,5 @@
 - Preserve lazy cold-feature boundaries, especially compaction; do not trade startup cost for pass-through wrappers or hidden dispatch.
 - Prewarm must match real-turn tools; Pi `ToolInfo` omits constrained sampling, so restore the owned `exec` contract explicitly.
 - Native compaction presentation is a custom entry: never route it through `sendMessage`, which can queue an empty continuation during auto-compaction.
+- Automatic compaction can resume without another agent_start. Preserve the originating delivery context through same-session transport resets, but never attach it to canonical compaction requests.
 - Notice renderers use Pi's theme tokens and expansion hooks. Summaries are user-facing metadata, not first-line previews of model content; provider-role promotion does not own their UI.

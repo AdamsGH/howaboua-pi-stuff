@@ -24,8 +24,8 @@ export function createCodexCompactionLifecycle(
 			// Notes may load after PCC. Yield before any provider work, not after its hook cancels.
 			if (state.externalNotes?.owner.allowsCompaction?.(event.reason) === false) return undefined;
 			if (!state.externalNotes && state.contextTree.handoff.active) return { cancel: true };
-			// Summaries can share the model/session routing; keep the live checkpoint.
-			runtime.finishTurn();
+			// Compaction can resume this run without another agent_start.
+			runtime.suspendOrdinaryPrewarm();
 			state.cwd = ctx.cwd;
 			const plan = resolveCodexRuntimePlanForState(
 				ctx,
