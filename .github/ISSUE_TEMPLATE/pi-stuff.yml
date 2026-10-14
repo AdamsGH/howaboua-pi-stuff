@@ -35,6 +35,7 @@ body:
         - pi-gippity-control
         - pi-gpt-switcher
         - pi-memories
+        - pi-notes-compaction
         - pi-pet
         - pi-semantic-grep
         - pi-shepherdr
