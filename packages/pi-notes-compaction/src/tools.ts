@@ -590,7 +590,8 @@ export function createTools(
 							? lifecycle.normalCompaction
 								? "Normal compaction will run before the new window opens"
 								: "A new window will continue from your notes after this run settles"
-							: "A checkpoint or rollover is already pending. Save notes and finish your response",
+							: (lifecycle.rolloverDeclineReason ??
+								"A checkpoint or rollover is already pending. Save notes and finish your response"),
 					}),
 					...(started ? { terminate: true } : {}),
 				};

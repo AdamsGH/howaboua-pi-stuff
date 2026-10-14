@@ -11,8 +11,13 @@ import type {
 import {
 	buildSessionProjection,
 	prepareBranchEntries,
+	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import type { NotesBridge } from "./bridge.js";
+import {
+	mayCompactHistory,
+	NOTHING_TO_COMPACT,
+} from "./compaction-preflight.js";
 import { hasFreshNotes } from "./fresh-notes.js";
 import { noteHints, sessionRef } from "./notes.js";
 import type { IdleMinutes } from "./settings.js";
@@ -43,6 +48,7 @@ interface Rollover {
 	sessionId: string;
 	phase: "scheduled" | "compacting";
 	triggerTurn: boolean;
+	noOp?: boolean;
 }
 
 export class NotesLifecycle {
@@ -56,6 +62,10 @@ export class NotesLifecycle {
 	private checkpoint: Checkpoint | undefined;
 	private held: HeldInput | undefined;
 	private rollover: Rollover | undefined;
+	private declineReason: string | undefined;
+	get rolloverDeclineReason(): string | undefined {
+		return this.declineReason;
+	}
 	private cancelledCompact:
 		| {
 				sessionId: string;
@@ -76,6 +86,7 @@ export class NotesLifecycle {
 	reset(ctx?: ExtensionContext): void {
 		this.checkpoint = undefined;
 		this.rollover = undefined;
+		this.declineReason = undefined;
 		this.cancelledCompact = undefined;
 		for (const admit of this.held?.admissions ?? [])
 			admit({ action: "handled" });
@@ -138,9 +149,21 @@ export class NotesLifecycle {
 			runId,
 		);
 	}
+	private canCompact(ctx: ExtensionContext): boolean {
+		const settings = SettingsManager.inMemory(this.pi.getSettings());
+		return mayCompactHistory(
+			this.windows.projectBranch(ctx.sessionManager.getBranch()),
+			settings.getCompactionSettings(ctx.model).keepRecentTokens,
+		);
+	}
 	requestRollover(ctx: ExtensionContext): boolean {
+		this.declineReason = undefined;
 		if (this.checkpoint || this.held) return false;
 		if (this.rollover) return false;
+		if (this.normalCompaction && !this.canCompact(ctx)) {
+			this.declineReason = NOTHING_TO_COMPACT;
+			return false;
+		}
 		this.rollover = {
 			sessionId: ctx.sessionManager.getSessionId(),
 			phase: "scheduled",
@@ -175,6 +198,11 @@ export class NotesLifecycle {
 			await this.openWindow(ctx, triggerTurn, true);
 			return;
 		}
+		// History may change after admission. A no-op must release held input.
+		if (!this.canCompact(ctx)) {
+			ctx.ui.notify(NOTHING_TO_COMPACT, "warning");
+			return;
+		}
 		const pending: Rollover = {
 			sessionId: ctx.sessionManager.getSessionId(),
 			phase: "compacting",
@@ -195,7 +223,19 @@ export class NotesLifecycle {
 					void this.openWindow(ctx, triggerTurn, false).then(resolve, reject);
 				},
 				onError: (error) => {
+					const current =
+						this.rollover === pending &&
+						pending.sessionId === ctx.sessionManager.getSessionId();
 					if (this.rollover === pending) this.rollover = undefined;
+					if (
+						current &&
+						((pending.noOp && error.message === "Compaction cancelled") ||
+							error.message === "Nothing to compact (session too small)")
+					) {
+						ctx.ui.notify(NOTHING_TO_COMPACT, "warning");
+						resolve();
+						return;
+					}
 					reject(error);
 				},
 			});
@@ -390,6 +430,7 @@ export class NotesLifecycle {
 							message.role !== "system" && message.role !== "compactionSummary",
 					);
 				if (!messages.length) {
+					if (this.rollover?.phase === "compacting") this.rollover.noOp = true;
 					ctx.ui.notify(
 						"Nothing to compact in the current context window. The existing context remains.",
 						"warning",
