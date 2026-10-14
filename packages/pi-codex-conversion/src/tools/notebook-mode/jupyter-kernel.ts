@@ -6,10 +6,12 @@ import type { RuntimeContentItem } from "../code-mode/types.ts";
 import { createJupyterConnectionFile, type JupyterConnectionInfo } from "./jupyter-connection.ts";
 import { diagnoseDenoSyntax } from "./deno-syntax-diagnostics.ts";
 import { JupyterSocket } from "./jupyter-socket.ts";
+import { withNotebookRecoveryGuidance } from "./runtime-health.ts";
 import {
 	applyExecuteReplyError,
 	applyKernelOutput,
 	finishKernelExecution,
+	OUTPUT_DRAIN_MESSAGE,
 	type ActiveKernelExecution,
 	type KernelExecutionResult,
 } from "./jupyter-output.ts";
@@ -158,6 +160,7 @@ export class DenoJupyterKernel {
 			if (reply.header.msg_type !== "execute_reply") {
 				throw new Error(`Deno Jupyter returned ${reply.header.msg_type} for execute_request`);
 			}
+			result = await this.drainOutput(execution);
 			const replied = applyExecuteReplyError(result, reply);
 			if (options.signal?.aborted) {
 				if (options.interruptOnAbort !== false) this.failKernel(new Error("Deno Jupyter execution was aborted"));
@@ -179,11 +182,11 @@ export class DenoJupyterKernel {
 				}
 			}
 			return replied;
-		} catch (error) {
-			if (this.active === execution) this.active = undefined;
-			throw error;
 		} finally {
 			finished = true;
+			if (this.active === execution || this.active?.drain?.originalRequestId === execution.requestId) {
+				this.active = undefined;
+			}
 			if (abortTimer) clearTimeout(abortTimer);
 			options.signal?.removeEventListener("abort", abort);
 		}
@@ -395,10 +398,57 @@ export class DenoJupyterKernel {
 
 	private handleIopub(message: JupyterMessage): void {
 		const execution = this.active;
-		if (!execution || message.parent_header["msg_id"] !== execution.requestId) return;
+		if (!execution || (message.parent_header["msg_id"] !== execution.requestId
+			&& message.parent_header["msg_id"] !== execution.drain?.originalRequestId)) return;
 		if (applyKernelOutput(message, execution) === "idle") {
-			this.active = undefined;
 			execution.resolve(finishKernelExecution(execution));
+		}
+	}
+
+	private async drainOutput(execution: ActiveKernelExecution): Promise<KernelExecutionResult> {
+		const marker = randomUUID();
+		const message = createJupyterMessage("execute_request", {
+			code: `globalThis.Deno.jupyter.broadcast(${JSON.stringify(OUTPUT_DRAIN_MESSAGE)}, { marker: ${JSON.stringify(marker)} });`,
+			silent: true,
+			store_history: false,
+			user_expressions: {},
+			allow_stdin: false,
+			stop_on_error: true,
+		}, this.session);
+		let drain!: ActiveKernelExecution;
+		const completion = new Promise<KernelExecutionResult>((resolve, reject) => {
+			drain = {
+				...execution,
+				requestId: message.header.msg_id,
+				drain: { originalRequestId: execution.requestId, marker, idle: false, seen: false },
+				resolve,
+				reject,
+			};
+		});
+		// Deno publishes idle independently of its FIFO output drainer. Keep both
+		// parent IDs until the barrier arrives; queued output can be reattributed.
+		this.active = drain;
+		const timeoutError = new Error("Notebook output collection timed out");
+		try {
+			const [, result] = await withTimeout(
+				Promise.all([
+					this.sendShellRequest(message, REQUEST_TIMEOUT_MS, "output drain").then((reply) => {
+						if (reply.header.msg_type !== "execute_reply" || reply.content["status"] !== "ok") {
+							throw new Error("Unexpected output drain reply");
+						}
+					}),
+					completion,
+				]),
+				REQUEST_TIMEOUT_MS,
+				() => timeoutError,
+			);
+			return result;
+		} catch (error) {
+			const failure = new Error(withNotebookRecoveryGuidance(
+				`Notebook output collection ${error === timeoutError ? "timed out" : "failed"}; the runtime is unavailable`,
+			), { cause: error });
+			this.failKernel(failure);
+			throw failure;
 		}
 	}
 

@@ -14,3 +14,4 @@
 - directory-lock.ts owns cross-process leases. Release only the observed owner file, never recursively delete lock paths.
 - V8 stays under tools/code-mode/. Share public tool, rendering, nested-tool and output contracts without changing the vendored host.
 - Support Linux/macOS/Windows x64/arm64. Pin versions, sizes and checksums for archives and extracted executables.
+- Deno publishes idle before queued output drains and may reattribute it to the next request. Collect output through the private FIFO barrier and its idle, including after errors. The barrier must not rewrite user source or add history.
