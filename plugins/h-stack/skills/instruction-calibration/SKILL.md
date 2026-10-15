@@ -1,7 +1,7 @@
 ---
 name: instruction-calibration
 description: "Read before empirically tuning a reusable skill or agent prompt."
-last-changed: "2026-09-24"
+last-changed: "2026-10-15"
 ---
 
 For reusable skill structure, also load an applicable skill-authoring skill.
@@ -15,7 +15,7 @@ For reusable skill structure, also load an applicable skill-authoring skill.
 ## Control the layers
 
 - Inspect current harness help. Start with few local instruction layers, record what remains, then restore docs access, repository context, and skills deliberately. These discovery runs are not isolated instruction comparisons when several variables change.
-- For Pi, `pi -nc -ns -ne` disables discovery, not an agent's ability to read instruction files. Inspect actual reads and loaded prompt layers. Exclude contaminated baselines or restrict instruction-file access equally in both arms.
+- Disabling skill or extension discovery does not stop an agent from reading instruction files it can still open. Inspect actual reads and loaded prompt layers. Exclude contaminated baselines, or restrict instruction-file access equally in both arms.
 - Compare fresh sessions with identical model, reasoning, tools, cwd, task, and available files. Change only the candidate instruction. Keep follow-ups and reloads for exploration, not clean baseline evidence.
 - Test the one-shot output before coaching. Do not credit corrections from a follow-up to the original instruction.
 - Finish with the normal worker environment to check skill selection and conflicting layers. Treat that as integration evidence, not an isolated comparison.

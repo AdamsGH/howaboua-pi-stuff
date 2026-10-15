@@ -12,7 +12,7 @@ Cursor discovers the skills from `skills/`. The only command is `/tune-comms`.
 | `skill-creator` | Creating or revising a reusable agent skill |
 | `instruction-calibration` | Empirically tuning a reusable skill or agent prompt |
 | `prompt-caching` | Designing, measuring, or debugging prompt-cache behaviour |
-| `agent-tool-design` | Creating, reviewing, or refining a tool an agent can call. `references/pi.md` is an optional addendum for a Pi tool |
+| `agent-tool-design` | Creating, reviewing, or refining a tool an agent can call |
 | `extension-design` | Creating or refining a coding-agent extension |
 | `harness-checklist` | Auditing a coding-agent harness and recommending improvements |
 | `agent-session-diagnostics` | Diagnosing a session, or a recurring skill or tool failure |
