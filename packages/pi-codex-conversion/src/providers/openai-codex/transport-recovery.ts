@@ -248,6 +248,7 @@ export function createCodexTransportStream<TApi extends Api>(
 					effectiveOptions.sessionId, accountId, effectiveOptions.signal,
 					normalizeTimeoutMs(effectiveOptions.websocketConnectTimeoutMs, "websocketConnectTimeoutMs"), effectiveOptions.env,
 					(error) => diagnostics?.({ type: "failure", lane: "prewarm", transport: "websocket", failure: codexDiagnosticsFailure(error) }),
+					diagnostics,
 				);
 			}
 			const reconstructedBody = await deps.prepareRequestBody(model, resolvedContext, effectiveOptions, responsesLite);

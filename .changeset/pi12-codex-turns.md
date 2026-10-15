@@ -12,5 +12,6 @@ Requires Pi 1.2.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `try
 - Fixed silent shell commands blocking Code and Notebook indefinitely. Commands now yield resumable sessions while preserving output-aware waits and polling backoff; completed output remains available after the native process expires.
 - Fixed Notebook cells losing queued output or attributing it to the next cell, including when execution fails.
 - Fixed Remote tool results preventing an ongoing run from continuing after automatic compaction.
+- Added metadata-only request fingerprints and WebSocket lifecycle events to cache diagnostic logs, including idle disconnects and client-initiated resets.
 - Context-window identity and recovery guidance now survive compaction, including using history when no checkpoint is available.
 - Added **New window requests: off | pi-limits | unrestricted**, independent of the compaction method. `new_context` now requires a successful note write immediately before the request. Pi-limited requests continue in the same window when Pi has nothing to compact.

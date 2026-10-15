@@ -54,6 +54,11 @@ function field(key: string, value: string | number | boolean | null | undefined)
 }
 
 function eventFields(event: CodexDiagnosticsEvent): Array<string | undefined> {
+	if (event.type === "connection") return [
+		field("event", event.type), field("socket_id", event.socketId), field("phase", event.phase),
+		field("initiator", event.initiator), field("cause", event.cause),
+		field("close_code", event.closeCode), field("close_reason", event.closeReason),
+	];
 	if (event.type === "timing") return [
 		field("event", event.type), field("lane", event.lane), field("transport", event.transport),
 		field("attempt", event.attempt), field("outcome", event.outcome),
@@ -71,6 +76,12 @@ function eventFields(event: CodexDiagnosticsEvent): Array<string | undefined> {
 		field("attempt", event.attempt),
 		field("socket", event.socketReused === undefined ? undefined : event.socketReused ? "reused" : "new"),
 		field("socket_age_ms", event.socketAgeMs),
+		field("socket_id", event.socketId),
+		field("instructions_fingerprint", event.requestMetadata?.instructionsFingerprint),
+		field("tools_fingerprint", event.requestMetadata?.toolsFingerprint),
+		field("cache_key_fingerprint", event.requestMetadata?.cacheKeyFingerprint),
+		field("routing_fingerprint", event.requestMetadata?.routingFingerprint),
+		field("options_fingerprint", event.requestMetadata?.optionsFingerprint),
 		field("socket_lane", event.socketLane),
 		field("continuation", event.continuation),
 		field("continuation_input_items", event.continuationBaselineInputItems),
@@ -132,6 +143,7 @@ function eventFields(event: CodexDiagnosticsEvent): Array<string | undefined> {
 			field("event", event.type),
 			field("transport", event.transport),
 			field("socket", event.socketReused ? "reused" : "new"),
+			field("socket_id", event.socketId),
 			field("socket_age_ms", event.socketAgeMs),
 			field("socket_lane", event.socketLane),
 			field("prewarm_kind", event.prewarm.kind),

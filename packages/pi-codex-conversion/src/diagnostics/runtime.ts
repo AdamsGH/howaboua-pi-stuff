@@ -147,7 +147,7 @@ export async function createCodexDiagnosticsRuntime(options: {
 				showCurrent(`${strategy ?? event.prewarm.kind} ready • WS ${event.socketReused ? "reused" : "new"}`);
 				return;
 			}
-			if (event.type === "keepalive" || event.type === "timing") return;
+			if (event.type === "keepalive" || event.type === "timing" || event.type === "connection") return;
 			if (event.type === "retry") {
 				showCurrent(`${laneLabel(event.lane) ? `${laneLabel(event.lane)} • ` : ""}${event.transport === "websocket" ? "WS" : "SSE"} retry ${event.attempt}`);
 				return;

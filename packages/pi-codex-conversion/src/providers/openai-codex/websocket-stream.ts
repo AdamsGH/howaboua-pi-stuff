@@ -1,6 +1,7 @@
 import type { Api, AssistantMessage, AssistantMessageEventStream, Model } from "@earendil-works/pi-ai";
 import { createCodexRequestTiming, type CodexAttemptTiming } from "./diagnostic-timing.ts";
 import { codexRequestDiagnostics } from "./diagnostic-request.ts";
+import { webSocketDiagnosticId } from "./websocket-connection.ts";
 import { normalizeTimeoutMs } from "./sse.ts";
 import { buildCachedWebSocketRequestBody } from "./websocket-continuation.ts";
 import { acquireWebSocket, parseWebSocket, startWebSocketOutputOnFirstEvent } from "./websocket.ts";
@@ -37,7 +38,7 @@ export async function processWebSocketStream<TApi extends Api>(
 	const idleTimeoutMs = normalizeTimeoutMs(options?.timeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS, "timeoutMs");
 	const websocketConnectTimeoutMs = normalizeTimeoutMs(options?.websocketConnectTimeoutMs, "websocketConnectTimeoutMs");
 
-	const { socket, entry, release, reused, socketAgeMs } = await acquireWebSocket(url, headers, options?.sessionId, accountId, options?.signal, websocketConnectTimeoutMs, options?.env);
+	const { socket, entry, release, reused, socketAgeMs } = await acquireWebSocket(url, headers, options?.sessionId, accountId, options?.signal, websocketConnectTimeoutMs, options?.env, diagnostics?.record);
 	// Checkpoint validation happens after streaming; retire its server-side response state.
 	let keepConnection = !options?.canonicalCompaction;
 	let released = false;
@@ -81,6 +82,7 @@ export async function processWebSocketStream<TApi extends Api>(
 				sentInputItems: requestBody.input.length,
 				model: fullBody.model,
 				socketReused: reused,
+				socketId: webSocketDiagnosticId(socket),
 				socketAgeMs,
 				socketLane: "main",
 				continuation: cachedRequest.decision,
@@ -182,7 +184,7 @@ export async function prewarmWebSocket<TApi extends Api>(
 		? codexCacheKeepaliveSocketSessionId(options.sessionId)
 		: options.sessionId;
 	const socketLane = preserveContinuation ? "keepalive" : "main";
-	const { socket, entry, release, reused, socketAgeMs } = await acquireWebSocket(url, headers, socketSessionId, accountId, options.signal, websocketConnectTimeoutMs, options.env).catch(error => {
+	const { socket, entry, release, reused, socketAgeMs } = await acquireWebSocket(url, headers, socketSessionId, accountId, options.signal, websocketConnectTimeoutMs, options.env, recordDiagnostics).catch(error => {
 		timing.finish(options.signal?.aborted ? "aborted" : "failed");
 		recordDiagnostics?.({ type: "failure", lane: "prewarm", transport: "websocket", requestId: requestTiming.requestId, failure: codexDiagnosticsFailure(error) });
 		throw error;
@@ -203,7 +205,7 @@ export async function prewarmWebSocket<TApi extends Api>(
 		// existing baseline; the real request still validates its exact continuation.
 		if (!preserveContinuation && !generate && reused && entry?.continuation
 			&& (prewarm.kind === "ordinary" || (cachedRequest.decision === "delta" && requestBody.input.length === 0))) {
-			recordDiagnostics?.({ type: "prewarm-ready", requestId: requestTiming.requestId, transport: "websocket", socketReused: reused, socketAgeMs, socketLane, prewarm });
+			recordDiagnostics?.({ type: "prewarm-ready", requestId: requestTiming.requestId, transport: "websocket", socketId: webSocketDiagnosticId(socket), socketReused: reused, socketAgeMs, socketLane, prewarm });
 			return { socketReused: reused };
 		}
 		recordDiagnostics?.({
@@ -217,6 +219,7 @@ export async function prewarmWebSocket<TApi extends Api>(
 			sentInputItems: requestBody.input.length,
 			model: body.model,
 			socketReused: reused,
+			socketId: webSocketDiagnosticId(socket),
 			socketAgeMs,
 			socketLane,
 			prewarm,
@@ -252,6 +255,7 @@ export async function prewarmWebSocket<TApi extends Api>(
 		}
 		recordDiagnostics?.({
 			type: "prewarm-ready",
+			socketId: webSocketDiagnosticId(socket),
 			requestId: requestTiming.requestId,
 			transport: "websocket",
 			socketReused: reused,
