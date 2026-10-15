@@ -18,6 +18,8 @@ With Pi Codex Conversion 3.0.48 or newer, local notes work alongside Codex tools
 
 The agent keeps the familiar `notes`, `history`, `new_context` and `get_context_remaining` tools. Notes use virtual paths. Relative paths belong to the current agent. History searches the selected Pi session branch, including earlier windows. It does not create a second transcript archive.
 
+Previously shared local notes remain readable after the other agent closes or Shepherdr is removed. Notes follows the saved family relationships and attachment aliases without requiring PCC. Reads use the other session's saved branch. When only a retained attachment snapshot is available, the result identifies it as detached or potentially stale. Cross-agent writes and history still require their live routing service.
+
 By default, `new_context` starts a fresh window without generating a summary. The agent receives recent note paths, and Pi's saved history remains available for lookup.
 
 The tool requires a successful checkpoint write immediately before the request. Direct `notes` writes and writes completed through `exec` or `wait` count. A missing, pending or failed write keeps the current run active and asks the agent to save a note first.

@@ -21,6 +21,7 @@ import {
 } from "./fresh-notes.js";
 import { noteHints, sessionRef } from "./notes.js";
 import type { IdleMinutes, NewWindowRequests } from "./settings.js";
+import { savedNotesIdentity } from "./shared-notes.js";
 import type { NotesStore } from "./store.js";
 import {
 	SETTLEMENT_ENTRY,
@@ -80,7 +81,13 @@ export class NotesLifecycle {
 		this.store = store;
 	}
 	agent(ctx: ExtensionContext): string {
-		return this.bridge?.agentName?.(ctx) ?? "/root";
+		return (
+			this.bridge?.agentName?.(ctx) ??
+			savedNotesIdentity({
+				threadId: ctx.sessionManager.getSessionId(),
+				entries: ctx.sessionManager.getEntries(),
+			}).agentName
+		);
 	}
 	reset(ctx?: ExtensionContext): void {
 		this.customAdmission = undefined;

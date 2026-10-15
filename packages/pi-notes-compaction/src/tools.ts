@@ -24,6 +24,7 @@ import {
 	sourceSessionIds,
 	useNotes,
 } from "./notes.js";
+import { readSharedNotes, sharedNotesUnavailable } from "./shared-notes.js";
 import type { NotesStore } from "./store.js";
 
 const NOTES_ACTIONS = [
@@ -361,15 +362,25 @@ function createQueryExecutor(
 		if (help) return help;
 		assertActive();
 		const raw = relevant("notes", input);
-		const routed =
-			!shared &&
-			(await lifecycle.bridge?.route?.(
-				{ namespace: "notes", params: raw },
-				callId,
-				ctx,
-				signal,
-			));
-		if (routed) return routed;
+		if (!shared) {
+			try {
+				const routed = await lifecycle.bridge?.route?.(
+					{ namespace: "notes", params: raw },
+					callId,
+					ctx,
+					signal,
+				);
+				if (routed) return routed;
+			} catch (error) {
+				signal?.throwIfAborted();
+				if (!sharedNotesUnavailable(error)) throw error;
+				const saved = await readSharedNotes(ctx, store, raw, signal);
+				if (saved) return result(saved);
+				throw error;
+			}
+			const saved = await readSharedNotes(ctx, store, raw, signal);
+			if (saved) return result(saved);
+		}
 		const params = relevant(
 			"notes",
 			normalizeNoteParams(raw, lifecycle.agent(ctx)),

@@ -97,7 +97,7 @@ For direct calls, extend PCC's `codexHistoryNotes` extraction and Responses conv
 
 **Persistence boundary:** `Uint8Array` is only the in-process adapter type. Any bytes placed in persisted result details must be encoded explicitly, for example base64 with the declared encoding. JSON serialization of a typed array is not a supported cache or replay format. SQLite stores the original BLOB. PCC retains its existing serialized opaque-delivery format where possible.
 
-Optional `agentName(ctx)` and `route(query, callId, ctx, signal?)` adapt existing PCC family identity and sharing routes. `route` returns `undefined` for current-agent requests. For another agent it returns the normal routed result, preserving that owner's freshness and delivery semantics. Without this capability, cross-agent targets fail explicitly rather than reading another session by guesswork.
+Optional `agentName(ctx)` and `route(query, callId, ctx, signal?)` adapt existing PCC family identity and sharing routes. `route` returns `undefined` for current-agent requests. For another agent it returns the normal routed result, preserving that owner's freshness and delivery semantics. If routing is absent or unavailable, Notes can read previously shared local notes through persisted family relationships and attachment aliases. It follows recorded local session paths, never a directory scan. Saved identities also preserve agent names without PCC. Authentication, query and cancellation errors do not trigger this fallback. Cross-agent writes and history still require live routing.
 
 ## Validation required for the PCC patch
 

@@ -335,7 +335,16 @@ export function useNotes(
 			file: noteMetadata(revision, root),
 		};
 	}
+	return readNotes(notes, params, agent);
+}
 
+export function readNotes(
+	notes: ReadonlyMap<string, NoteRevision>,
+	params: Record<string, unknown>,
+	agent: string,
+): Record<string, unknown> {
+	const action = params["action"];
+	const root = `${agent}/notes/`;
 	if (action === "read_file") {
 		const path = params["path"] as string;
 		const note = notes.get(path);
