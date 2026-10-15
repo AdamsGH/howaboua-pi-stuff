@@ -43,7 +43,7 @@ export function githubClient(
 			const number = Number(numberText);
 			if (!Number.isSafeInteger(number) || number < 1)
 				throw new Error("Thread number must be a positive safe integer.");
-			const repo =
+			const repo = (
 				url?.[1] ??
 				qualified?.[1] ??
 				(await gh([
@@ -53,7 +53,8 @@ export function githubClient(
 					"nameWithOwner",
 					"--jq",
 					".nameWithOwner",
-				]));
+				]))
+			).toLowerCase();
 			if (!/^[\w.-]+\/[\w.-]+$/.test(repo))
 				throw new Error(
 					"No GitHub origin found. Supply owner/repo#123 instead.",
