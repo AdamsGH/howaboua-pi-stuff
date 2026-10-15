@@ -6,7 +6,7 @@ Requires Pi 1.2.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `try
 
 - Extension-triggered turns now use Pi's full preparation without synthetic user prompts, including context-window continuations and voice requests.
 - Code and Notebook now wait for MCP servers named in an exec cell before capturing its tools. `ALL_TOOLS` waits for all enabled servers.
-- Code and Notebook now list native deferred tools in `ALL_TOOLS` only while active in Pi. They remain callable by name while inactive, and visibility changes leave standing tool instructions unchanged.
+- Code and Notebook now list native deferred extension tools in `ALL_TOOLS` only while active in Pi. They remain callable by name while inactive. Callable MCP tools remain discoverable, and visibility changes leave standing tool instructions unchanged.
 - Fixed concurrent exec, wait and notebook calls colliding with the active Notebook kernel. Outer calls now run sequentially; tool calls within a cell can still run in parallel.
 - PCC now resumes its own continuity settings when Notes Compaction is inactive for the selected model, without bringing retired conversation back into context.
 - Fixed silent shell commands blocking Code and Notebook indefinitely. Commands now yield resumable sessions while preserving output-aware waits and polling backoff; completed output remains available after the native process expires.

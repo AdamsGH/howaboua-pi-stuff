@@ -29,7 +29,8 @@ export function createPiCodeModeBridge(pi: ExtensionAPI): {
 					promptGuidelines: metadata?.promptGuidelines,
 					kind: "function",
 					deferLoading: true,
-					discoverWhenDeferred: loadout.getExposure(tool.name) !== "deferred" || declared.has(tool.name),
+					// Pi maps MCP's codemode exposure to deferred; server discovery still owns its catalogue.
+					discoverWhenDeferred: mcp || loadout.getExposure(tool.name) !== "deferred" || declared.has(tool.name),
 					...(mcp ? { discovery: "server" as const } : {}),
 					executionPipeline: "pi",
 					inputSchema: tool.parameters,

@@ -256,9 +256,9 @@ text(status);
 
 ### Pi extension and MCP tools
 
-Pi-callable extension tools automatically appear in `tools`, with no extra registration. `ALL_TOOLS` lists active direct tools and tools with `codemode` exposure. Native `deferred` tools appear in the catalogue only while active in Pi, but remain callable by name while inactive. Catalogue changes leave standing tool instructions unchanged. An [explicit integration](#extension-apis) takes precedence for the same Pi tool, including its custom behaviour and activation gate. Hidden and model-only tools are not imported.
+Pi-callable extension tools automatically appear in `tools`, with no extra registration. `ALL_TOOLS` lists active direct tools and tools with `codemode` exposure. Native extension tools with `deferred` exposure appear in the catalogue only while active in Pi, but remain callable by name while inactive. Catalogue changes leave standing tool instructions unchanged. An [explicit integration](#extension-apis) takes precedence for the same Pi tool, including its custom behaviour and activation gate. Hidden and model-only tools are not imported.
 
-Configure MCP servers once in Pi's built-in MCP extension. Its callable tools and resource helpers use the same bridge. Pi's extension switches, tool restrictions and disabled servers are respected. Pi retains connection management, authentication, permissions and tool hooks; its native `codemode` extension is not required.
+Configure MCP servers once in Pi's built-in MCP extension. Its callable tools and resource helpers use the same bridge and remain discoverable in `ALL_TOOLS`. Pi's extension switches, tool restrictions and disabled servers are respected. Pi retains connection management, authentication, permissions and tool hooks; its native `codemode` extension is not required.
 
 `exec` waits for pending MCP connections named in its source before starting the cell. Using `ALL_TOOLS` waits for all enabled servers. Names assembled dynamically or hidden in retained functions may not identify a server. Missing-tool errors identify the MCP namespace when known, otherwise flag ambiguous name prefixes. If that server connects, retry in a new exec cell. Repeated failures may require disabling that server. Calls are never retried automatically and servers are never disabled automatically.
 
