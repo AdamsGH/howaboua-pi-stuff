@@ -1,6 +1,6 @@
 # @howaboua/pi-stuff
 
-The full general-purpose bundle: the extensions from `@howaboua/pi-extensions`, pi-ask's prompt workflows, and the skills from `@howaboua/pi-skills`.
+The general-purpose bundle: the extensions from `@howaboua/pi-extensions`, pi-ask's prompt workflows, and the skills from `@howaboua/pi-skills`.
 
 ## Install
 
@@ -15,7 +15,7 @@ This installs:
 
 `pi-browser`, `pi-codex-conversion`, `pi-codex-web-run`, `pi-codex-imagegen`, `pi-subdir-agents`, and `omarchy-help` are intentionally separate installs. These packages cover logged-in browser access, Codex integration, nested agent guidance, and workstation-specific support.
 
-`pi-agent-board`, `pi-chatgpt-sites` and `pi-codex-guardian` are also separate installs for boards, Sites management and tool approval reviews.
+`pi-agent-board`, `pi-chatgpt-sites`, `pi-codex-guardian`, `pi-notes-compaction` and `pi-sandbox` are also separate installs. They provide boards, Sites management, tool approval reviews, session notes and context rollover, and local VMs with app previews.
 
 The retired `pi-dynamic-tools`, `pi-explore-subagents`, `pi-memories`, `pi-semantic-grep`, and `pi-vent` packages are excluded and receive no further releases.
 

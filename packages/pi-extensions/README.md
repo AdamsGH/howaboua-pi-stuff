@@ -17,7 +17,7 @@ pi install npm:@howaboua/pi-extensions
 - `pi-gippity-control` — realtime voice and LAN remote control for any Pi model
 - `pi-github-watch`: opt-in notifications for GitHub issue and pull request comments
 - `pi-grok-realtime`: Grok voice with Pi doing the work, plus local and browser dictation
-- `pi-gpt-switcher` — `/sol`, `/terra`, and `/luna` commands for GPT-5.6 Codex models
+- `pi-gpt-switcher`: `/sol`, `/luna` and `/astra` shortcuts for Codex models with configurable reasoning defaults
 - `pi-pet` — animated companion miniapps for GipPity Remote
 - `pi-shepherdr` — Herdr-native multi-agent orchestration
 - `pi-smart-btw` — async side-session questions
@@ -26,7 +26,7 @@ pi install npm:@howaboua/pi-extensions
 
 `pi-browser`, `pi-codex-conversion`, `pi-codex-web-run`, `pi-codex-imagegen`, and `pi-subdir-agents` are not included. Install them separately for logged-in browser access, Codex integration, or nested agent guidance.
 
-`pi-agent-board`, `pi-chatgpt-sites` and `pi-codex-guardian` are also separate installs for boards, Sites management and tool approval reviews.
+`pi-agent-board`, `pi-chatgpt-sites`, `pi-codex-guardian`, `pi-notes-compaction` and `pi-sandbox` are also separate installs. They provide boards, Sites management, tool approval reviews, session notes and context rollover, and local VMs with app previews.
 
 The retired `pi-dynamic-tools`, `pi-explore-subagents`, `pi-memories`, `pi-semantic-grep`, and `pi-vent` packages are excluded and receive no further releases.
 
