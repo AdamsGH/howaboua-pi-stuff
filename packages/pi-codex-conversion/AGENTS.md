@@ -15,5 +15,6 @@
 - Provider names/endpoints do not define backend identity. Renamed/proxied openai-codex-responses retains Codex transport, Fast Mode and account isolation.
 - Proxies are deliberate policy/monitoring/routing seams. Environment proxies preserve ChatGPT contracts. Explicit openai-responses passthrough supports only its backend's capabilities. Never reject by provider name or assume proxy means non-ChatGPT.
 - Native compaction supports OpenAI Codex and configured OpenAI/Codex passthrough only. V2 needs raw Responses output items, not arbitrary registered streams.
-- Mid-session harness updates stay chronological: developer role if supported, user otherwise—never folded into the initial system prompt as Pi’s fallback does.
+- Reuse `src/developer-messages.ts` for instruction delivery: `trySendCodexDeveloperCustomMessage` preserves caller rendering; false means nothing was sent, so fall back to `pi.sendMessage`. Delivery failures throw, not fall back.
+- `src/adapter/developer-messages.ts` promotes authenticated custom-message carriers to Responses developer items in place. Preserve chronology and keep UI/history identity separate from provider role; never route these through Pi system-prompt updates.
 - After TypeScript topology changes, run root bun run knip.
