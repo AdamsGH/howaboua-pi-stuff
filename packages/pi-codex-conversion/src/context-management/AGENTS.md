@@ -14,3 +14,4 @@
 - Sharing opt-in gates new children, not existing identity/routes. Never detach a family when sharing is disabled.
 - agent-relationship.ts owns native parent thread linkage and subagent classification independently of notes sharing. Bind fresh workers before task submission; resume preserves linkage, forks do not inherit it. Keep compatibility headers and client metadata aligned, including prewarm and compaction requests.
 - Native custom turns skip input but run before_agent_start while busy. Custom-turn admission must roll over before that reservation: Tree navigation rejects streaming. Do not manufacture user Continue prompts.
+- Carry compacted-away identity ahead of its summary only in complete context, with stable developer metadata. It must remain outside opaque replay, never alter a replay slice or queue a turn.

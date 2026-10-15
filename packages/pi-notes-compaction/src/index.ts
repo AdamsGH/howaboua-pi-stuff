@@ -64,7 +64,10 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 		identity: () =>
 			lifecycle.windows.current ? { ...lifecycle.windows.current } : undefined,
 		projectMessages: (messages) => {
-			const projected = lifecycle.windows.projectMessages(messages);
+			const projected = lifecycle.windows.projectMessages(
+				messages,
+				lifecycle.bridge?.prepareReminder,
+			);
 			return lifecycle.active
 				? projected
 				: projected.filter(

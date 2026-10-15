@@ -9,7 +9,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Box, Text, TruncatedText } from "@earendil-works/pi-tui";
-import type { WindowIdentity } from "./bridge.js";
+import type { NotesBridge, WindowIdentity } from "./bridge.js";
 import {
 	renderTaskBoundaryReminder,
 	taskBoundaryEligible,
@@ -177,14 +177,31 @@ export function windowMessage(
 
 export class Windows {
 	current: WindowIdentity | undefined;
+	private identityEntry:
+		| Extract<SessionEntry, { type: "custom_message" }>
+		| undefined;
+	private restoredIdentity:
+		| {
+				entryId: string;
+				timestamp: number;
+				prepare: NotesBridge["prepareReminder"];
+				message: AgentMessage;
+		  }
+		| undefined;
 	private compactedSinceBoundary = false;
 	private reminders = new Set<string>();
 	restore(entries: readonly SessionEntry[]): void {
 		this.current = undefined;
+		this.identityEntry = undefined;
 		this.compactedSinceBoundary = false;
 		this.reminders.clear();
 		for (const entry of entries) {
 			const details = windowDetails(entry);
+			if (
+				entry.type === "custom_message" &&
+				(details?.kind === "window" || details?.kind === "identity")
+			)
+				this.identityEntry = entry;
 			if (details?.kind === "window") {
 				this.current = details.identity;
 				if (details.trim) this.compactedSinceBoundary = false;
@@ -289,8 +306,74 @@ export class Windows {
 			} satisfies WindowDetails,
 		};
 	}
-	projectMessages(messages: readonly AgentMessage[]): AgentMessage[] {
-		if (this.compactedSinceBoundary) return [...messages];
+	projectMessages(
+		messages: readonly AgentMessage[],
+		prepareIdentity?: NotesBridge["prepareReminder"],
+	): AgentMessage[] {
+		if (this.compactedSinceBoundary) {
+			const summary = messages.findIndex(
+				(message) => message.role === "compactionSummary",
+			);
+			const entry = this.identityEntry;
+			const details = entry && windowDetails(entry);
+			const hasIdentity = messages.some((message) => {
+				const current =
+					message.role === "custom" &&
+					messageWindowDetails(message.customType, message.details);
+				return (
+					current &&
+					(current.kind === "window" || current.kind === "identity") &&
+					current.identity.currentWindowId === this.current?.currentWindowId
+				);
+			});
+			if (
+				summary < 0 ||
+				messages[0]?.role !== "system" ||
+				!entry ||
+				!details ||
+				typeof entry.content !== "string" ||
+				hasIdentity
+			)
+				return [...messages];
+			const timestamp = messages[summary]!.timestamp;
+			if (
+				this.restoredIdentity?.entryId !== entry.id ||
+				this.restoredIdentity.timestamp !== timestamp ||
+				this.restoredIdentity.prepare !== prepareIdentity
+			) {
+				const draft: CustomMessageEntryDraft = {
+					type: "custom_message",
+					customType: WINDOW_MESSAGE,
+					content: `${entry.content}\n\nIf no checkpoint is available, use history to recover missing context.`,
+					display: false,
+					details: {
+						...details,
+						kind: "identity",
+						trim: false,
+					} satisfies WindowDetails,
+				};
+				const prepared = prepareIdentity?.(draft) ?? draft;
+				this.restoredIdentity = {
+					entryId: entry.id,
+					timestamp,
+					prepare: prepareIdentity,
+					message: {
+						role: "custom",
+						customType: prepared.customType,
+						content: prepared.content,
+						display: prepared.display,
+						details: prepared.details,
+						timestamp,
+					},
+				};
+			}
+			// Carry the older identity ahead of its summary, outside opaque native replay.
+			return [
+				...messages.slice(0, summary),
+				this.restoredIdentity.message,
+				...messages.slice(summary),
+			];
+		}
 		let boundary = -1;
 		for (let i = 0; i < messages.length; i++) {
 			const message = messages[i]!;

@@ -223,8 +223,10 @@ export class CodexContextWindowManager {
 			);
 		}
 		if (boundaryIndex >= 0) this.rolloverPending = undefined;
-		const projected = trimPreviousWindow && boundaryIndex >= 0 && !hasRealCompactionAfterWindowBoundary(activeEntries)
+		let projected = trimPreviousWindow && boundaryIndex >= 0 && !hasRealCompactionAfterWindowBoundary(activeEntries)
 			? checkpointWindow(messages, boundaryIndex) : [...messages];
+		if (mode !== "off" && this.identity)
+			projected = restoreCompactedIdentity(projected, activeEntries, this.identity);
 		if (mode === "tree") return filterTreeArchiveSummaries(projected, buildTreeArchiveIndex(allEntries, activeEntries));
 		return mode === "off" ? projected.filter((message) =>
 			message.role !== "custom" || message.customType !== CODEX_CONTEXT_WINDOW_MESSAGE_TYPE) : projected;
@@ -506,6 +508,29 @@ function checkpointWindow(messages: readonly AgentMessage[], boundaryIndex: numb
 	const checkpoint = getCurrentSystemMessage(messages.slice(0, boundaryIndex));
 	const tail = messages.slice(boundaryIndex);
 	return checkpoint ? [checkpoint, ...tail] : tail;
+}
+
+function restoreCompactedIdentity(messages: AgentMessage[], entries: readonly SessionEntry[], identity: ContextWindowIdentity): AgentMessage[] {
+	const summary = messages.findIndex(message => message.role === "compactionSummary");
+	if (summary < 0 || messages[0]?.role !== "system" || messages.some(message => message.role === "custom" && message.customType === CODEX_CONTEXT_WINDOW_MESSAGE_TYPE &&
+		isCodexContextManagementMessageDetails(message.details) &&
+		(message.details.contextManagement.kind === "window" || message.details.contextManagement.kind === "identity") &&
+		message.details.contextManagement.currentWindowId === identity.currentWindowId)) return messages;
+	const compaction = entries.findLast(entry => entry.type === "compaction");
+	const source = entries.findLast(entry => entry.type === "custom_message" && entry.customType === CODEX_CONTEXT_WINDOW_MESSAGE_TYPE &&
+		isCodexContextManagementMessageDetails(entry.details) &&
+		(entry.details.contextManagement.kind === "window" || entry.details.contextManagement.kind === "identity") &&
+		entry.details.contextManagement.currentWindowId === identity.currentWindowId);
+	if (!compaction || source?.type !== "custom_message" || typeof source.content !== "string" || !isCodexContextManagementMessageDetails(source.details)) return messages;
+	const { trimPreviousWindow: _trim, ...contextManagement } = source.details.contextManagement;
+	// Carry the older identity ahead of its summary, outside opaque native replay.
+	const restored: AgentMessage = {
+		role: "custom", customType: CODEX_CONTEXT_WINDOW_MESSAGE_TYPE,
+		content: `${source.content}\n\nIf no checkpoint is available, use history to recover missing context.`,
+		display: false, timestamp: messages[summary]!.timestamp,
+		details: { ...source.details, id: `${compaction.id}:identity`, contextManagement: { ...contextManagement, kind: "identity" } } satisfies CodexContextManagementMessageDetails,
+	};
+	return [...messages.slice(0, summary), restored, ...messages.slice(summary)];
 }
 
 function identityFromDetails(
