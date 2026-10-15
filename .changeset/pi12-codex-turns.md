@@ -10,3 +10,4 @@ Requires Pi 1.2.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `try
 - PCC now resumes its own continuity settings when Notes Compaction is inactive for the selected model, without bringing retired conversation back into context.
 - Fixed silent shell commands blocking Code and Notebook indefinitely. Commands now yield resumable sessions while preserving output-aware waits and polling backoff; completed output remains available after the native process expires.
 - Fixed Notebook cells losing queued output or attributing it to the next cell, including when execution fails.
+- Fixed Remote tool results preventing an ongoing run from continuing after automatic compaction.
