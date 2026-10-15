@@ -139,7 +139,7 @@ export default async function (pi: ExtensionAPI) {
 			previous?.controller.abort();
 			const watch: Watch = {
 				thread,
-				seen,
+				seen: previous?.seen ?? seen,
 				controller: new AbortController(),
 				state: "watching",
 				nextCheck: 0,
