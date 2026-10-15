@@ -33,6 +33,7 @@ body:
         - pi-dynamic-tools
         - pi-explore-subagents
         - pi-gippity-control
+        - pi-github-watch
         - pi-gpt-switcher
         - pi-memories
         - pi-notes-compaction

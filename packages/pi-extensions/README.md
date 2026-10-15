@@ -15,6 +15,7 @@ pi install npm:@howaboua/pi-extensions
 - `pi-better-skills-tool` — progressive skill discovery in normal Pi, Code Mode, and Notebook Mode
 - `pi-cache-hit-predictor` — inline prompt-cache hit predictions when switching models or reasoning levels
 - `pi-gippity-control` — realtime voice and LAN remote control for any Pi model
+- `pi-github-watch`: opt-in notifications for GitHub issue and pull request comments
 - `pi-grok-realtime`: Grok voice with Pi doing the work, plus local and browser dictation
 - `pi-gpt-switcher` — `/sol`, `/terra`, and `/luna` commands for GPT-5.6 Codex models
 - `pi-pet` — animated companion miniapps for GipPity Remote

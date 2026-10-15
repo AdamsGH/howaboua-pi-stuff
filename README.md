@@ -10,8 +10,8 @@ Pi packages run with your local permissions. You can obviously trust me, a stran
 
 | Package | Includes | Deliberate exclusions |
 |---|---|---|
-| [`@howaboua/pi-stuff`](./packages/pi-stuff) | 15 general extensions and 15 shareable skills | Browser, Codex conversion/web/image/Guardian, retired standalone Code Mode, Omarchy support, and the standalone nested AGENTS loader |
-| [`@howaboua/pi-extensions`](./packages/pi-extensions) | 15 general extensions | Browser, Codex conversion/web/image/Guardian, retired standalone Code Mode, and the standalone nested AGENTS loader |
+| [`@howaboua/pi-stuff`](./packages/pi-stuff) | 13 general extensions and 15 shareable skills | Browser, Codex conversion/web/image/Guardian, retired standalone Code Mode, Omarchy support, and the standalone nested AGENTS loader |
+| [`@howaboua/pi-extensions`](./packages/pi-extensions) | 13 general extensions | Browser, Codex conversion/web/image/Guardian, retired standalone Code Mode, and the standalone nested AGENTS loader |
 | [`@howaboua/pi-skills`](./packages/pi-skills) | 15 shareable skills | Omarchy support |
 
 ```bash
@@ -43,6 +43,7 @@ Install `pi-codex-guardian` separately for tool-call approval reviews. It requir
 | [`pi-codex-conversion`](./packages/pi-codex-conversion) | Codex-shaped shell, patch, image inspection, and Code Mode tools for GPT/Codex models |
 | [`pi-codex-guardian`](./packages/pi-codex-guardian) | Guardian approval reviews before tool execution in native Pi, Code Mode, and Notebook Mode |
 | [`pi-gippity-control`](./packages/pi-gippity-control) | Realtime voice and LAN remote control for any Pi model |
+| [`pi-github-watch`](./packages/pi-github-watch) | Opt-in notifications when GitHub issue or pull request comments arrive |
 | [`pi-grok-realtime`](./packages/pi-grok-realtime) | Grok voice with Pi doing the work, local and browser dictation, and custom voice tools |
 | [`pi-gpt-switcher`](./packages/pi-gpt-switcher) | `/sol`, `/terra`, and `/luna` commands for GPT-5.6 Codex models |
 | [`pi-codex-imagegen`](./packages/pi-codex-imagegen) | Codex image generation and editing in normal Pi, Code Mode, and Notebook Mode |

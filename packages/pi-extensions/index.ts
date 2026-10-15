@@ -5,6 +5,7 @@ import howabouaPiAutoTrees from "@howaboua/pi-auto-trees";
 import howabouaPiBetterSkillsTool from "@howaboua/pi-better-skills-tool";
 import howabouaPiCacheHitPredictor from "@howaboua/pi-cache-hit-predictor";
 import howabouaPiGippityControl from "@howaboua/pi-gippity-control";
+import howabouaPiGithubWatch from "@howaboua/pi-github-watch";
 import howabouaPiGptSwitcher from "@howaboua/pi-gpt-switcher";
 import howabouaPiGrokRealtime from "@howaboua/pi-grok-realtime";
 import howabouaPiPet from "@howaboua/pi-pet";
@@ -20,6 +21,7 @@ export default async function (pi: ExtensionAPI) {
 	await howabouaPiBetterSkillsTool(pi);
 	await howabouaPiCacheHitPredictor(pi);
 	await howabouaPiGippityControl(pi);
+	await howabouaPiGithubWatch(pi);
 	await howabouaPiGptSwitcher(pi);
 	await howabouaPiGrokRealtime(pi);
 	await howabouaPiPet(pi);
