@@ -70,6 +70,7 @@ async function* reverseLines(file: FileHandle, size: number) {
 export async function readSavedNotesSession(
 	path: string,
 	signal?: AbortSignal,
+	history = false,
 ): Promise<SavedNotesSession> {
 	signal?.throwIfAborted();
 	const file = await open(path, "r");
@@ -104,7 +105,13 @@ export async function readSavedNotesSession(
 				else if (active && NOTE_ENTRIES.has(entry.customType))
 					branch.push(entry);
 				else continue;
-			} else if (active && Check(Handoff, entry)) branch.push(entry);
+			} else if (
+				active &&
+				history &&
+				(entry.type === "message" || entry.type === "custom_message")
+			)
+				branch.push(entry as SessionEntry);
+			else if (active && Check(Handoff, entry)) branch.push(entry);
 			else continue;
 		}
 		const after = await file.stat();

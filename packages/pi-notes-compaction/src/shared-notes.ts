@@ -5,6 +5,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { type Static, Type } from "typebox";
 import { Check } from "typebox/value";
+import { useHistory } from "./history.js";
 import { collectNotes, normalizeNoteParams, readNotes } from "./notes.js";
 import {
 	readSavedNotesSession,
@@ -153,17 +154,43 @@ export async function readSharedNotes(
 	params: Record<string, unknown>,
 	signal?: AbortSignal,
 ): Promise<Record<string, unknown> | undefined> {
+	return readSharedSession(ctx, store, params, "notes", signal);
+}
+
+export async function readSharedHistory(
+	ctx: ExtensionContext,
+	store: Pick<NotesStore, "read">,
+	params: Record<string, unknown>,
+	signal?: AbortSignal,
+): Promise<Record<string, unknown> | undefined> {
+	return readSharedSession(ctx, store, params, "history", signal);
+}
+
+async function readSharedSession(
+	ctx: ExtensionContext,
+	store: Pick<NotesStore, "read">,
+	params: Record<string, unknown>,
+	namespace: "notes" | "history",
+	signal?: AbortSignal,
+): Promise<Record<string, unknown> | undefined> {
 	if (
+		namespace === "notes" &&
 		!["read_file", "list_files_by_prefix", "search_contents"].includes(
 			String(params["action"]),
 		)
 	)
 		return;
-	const path = params["path"] ?? params["prefix"] ?? params["path_prefix"];
+	const path =
+		namespace === "history"
+			? params["agent_name"]
+			: (params["path"] ?? params["prefix"] ?? params["path_prefix"]);
 	if (typeof path !== "string" || !path.startsWith("/")) return;
-	const target = /^(\/root(?:\/[a-zA-Z0-9_-]+)*?)\/notes(?:\/|$)/.exec(
-		path,
-	)?.[1];
+	const target =
+		namespace === "history"
+			? /^\/root(?:\/[a-zA-Z0-9_-]+)*$/.test(path)
+				? path
+				: undefined
+			: /^(\/root(?:\/[a-zA-Z0-9_-]+)*?)\/notes(?:\/|$)/.exec(path)?.[1];
 	if (!target) return;
 	const outputAgent = target;
 	const current: SavedNotesSession = {
@@ -180,11 +207,13 @@ export async function readSharedNotes(
 		native: string,
 	) {
 		return {
-			...readNotes(
-				collectNotes(store, session.branch),
-				normalizeNoteParams(query, native),
-				outputAgent,
-			),
+			...(namespace === "history"
+				? useHistory(session.branch, query, session.threadId)
+				: readNotes(
+						collectNotes(store, session.branch),
+						normalizeNoteParams(query, native),
+						outputAgent,
+					)),
 			source: "saved-session",
 			read_only: true,
 			remote: { state: "not_fetched" },
@@ -201,10 +230,14 @@ export async function readSharedNotes(
 		retained?: unknown,
 		detached = false,
 	): Promise<Record<string, unknown> | undefined> {
-		if (file && !detached) {
+		if (file && (!detached || namespace === "history")) {
 			let saved: SavedNotesSession | undefined;
 			try {
-				saved = await readSavedNotesSession(file, signal);
+				saved = await readSavedNotesSession(
+					file,
+					signal,
+					namespace === "history",
+				);
 			} catch (error) {
 				signal?.throwIfAborted();
 				if (
@@ -212,7 +245,8 @@ export async function readSharedNotes(
 						error instanceof Error &&
 						"code" in error &&
 						error.code === "ENOENT" &&
-						retained !== undefined
+						retained !== undefined &&
+						namespace === "notes"
 					)
 				)
 					throw error;
@@ -223,7 +257,11 @@ export async function readSharedNotes(
 				return resolve(saved, destination, query);
 			}
 		}
-		if (destination !== identity.agentName || !Check(Snapshot, retained))
+		if (
+			namespace === "history" ||
+			destination !== identity.agentName ||
+			!Check(Snapshot, retained)
+		)
 			return;
 		const entry: SessionEntry = {
 			type: "custom",
@@ -260,6 +298,7 @@ export async function readSharedNotes(
 		const identity = savedNotesIdentity(session);
 		if (identity.agentName === destination) {
 			if (
+				namespace === "notes" &&
 				identity.storage === "remote" &&
 				!session.branch.some(
 					(entry) =>
@@ -332,7 +371,11 @@ export async function readSharedNotes(
 		);
 		if (Check(Member, member)) {
 			if (member.machine !== "local") return;
-			const saved = await readSavedNotesSession(member.sessionFile, signal);
+			const saved = await readSavedNotesSession(
+				member.sessionFile,
+				signal,
+				namespace === "history",
+			);
 			const child = savedNotesIdentity(saved);
 			if (
 				child.sessionId !== identity.sessionId ||
@@ -349,6 +392,7 @@ export async function readSharedNotes(
 			const saved = await readSavedNotesSession(
 				routing.parent.slice(0, -".shepherdr-context.json".length),
 				signal,
+				namespace === "history",
 			);
 			const parent = savedNotesIdentity(saved);
 			if (

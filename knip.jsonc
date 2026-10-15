@@ -60,6 +60,9 @@
 		"packages/pi-gippity-control": {
 			"entry": ["changelog.ts"]
 		},
+		"packages/pi-github-watch": {
+			"entry": ["changelog.ts"]
+		},
 		"packages/pi-sandbox": {
 			"entry": ["changelog.ts", "src/daemon.ts"]
 		},
