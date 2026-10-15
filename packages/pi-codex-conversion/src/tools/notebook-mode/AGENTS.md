@@ -3,6 +3,7 @@
 - Merge against each session's observed baseline. Conflicts keep project bytes and save the candidate separately. Stale restores exclude current names and names deleted since their baseline.
 - Validate persisted identifiers/basenames before source injection or deletion. Manifest paths cannot escape their state directory.
 - Jupyter authenticates four JSON frames, not routing envelopes. Preserve empty/multipart and 64-bit ZMTP frames across TCP chunks. Bound lengths before allocation.
+- Deno idle can precede queued output and reattribute it to the next request. Keep collection open through the FIFO marker and drain idle, including after errors. Do not rewrite user source or add history for the drain.
 - Saved runtime versions are provenance, not restore/write gates. Let deserialization report incompatibility.
 - journal.ts appends events and rotates at the heap-derived budget, retaining one previous .ipynb. journal-document.ts materialises standard notebooks.
 - Sessions are private forks. New globalThis properties and pinned bindings merge into project state, never another live kernel.
