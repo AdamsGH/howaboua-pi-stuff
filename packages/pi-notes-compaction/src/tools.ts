@@ -478,7 +478,15 @@ function createQueryExecutor(
 				if (routed) return routed;
 			} catch (error) {
 				signal?.throwIfAborted();
-				if (!sharedNotesUnavailable(error)) throw error;
+				if (
+					!sharedNotesUnavailable(error) &&
+					!(
+						error instanceof Error &&
+						error.message ===
+							"Counterpart history requires its live attached owner; native history is unchanged"
+					)
+				)
+					throw error;
 				const saved = await readSharedHistory(ctx, store, params, signal);
 				if (saved) return result(saved);
 				throw error;
