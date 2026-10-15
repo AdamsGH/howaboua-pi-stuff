@@ -24,7 +24,11 @@ import {
 	sourceSessionIds,
 	useNotes,
 } from "./notes.js";
-import { readSharedNotes, sharedNotesUnavailable } from "./shared-notes.js";
+import {
+	readSharedHistory,
+	readSharedNotes,
+	sharedNotesUnavailable,
+} from "./shared-notes.js";
 import type { NotesStore } from "./store.js";
 
 const NOTES_ACTIONS = [
@@ -463,9 +467,25 @@ function createQueryExecutor(
 		assertActive();
 		const params = relevant("history", input);
 		const query = { namespace: "history", params } as const;
-		const routed =
-			!shared && (await lifecycle.bridge?.route?.(query, callId, ctx, signal));
-		if (routed) return routed;
+		if (!shared) {
+			try {
+				const routed = await lifecycle.bridge?.route?.(
+					query,
+					callId,
+					ctx,
+					signal,
+				);
+				if (routed) return routed;
+			} catch (error) {
+				signal?.throwIfAborted();
+				if (!sharedNotesUnavailable(error)) throw error;
+				const saved = await readSharedHistory(ctx, store, params, signal);
+				if (saved) return result(saved);
+				throw error;
+			}
+			const saved = await readSharedHistory(ctx, store, params, signal);
+			if (saved) return result(saved);
+		}
 		if (params["agent_name"] && params["agent_name"] !== lifecycle.agent(ctx))
 			throw new Error(
 				"That agent's history is not available here. Omit agent_name to search this session.",
