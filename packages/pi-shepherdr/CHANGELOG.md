@@ -1,5 +1,13 @@
 # @howaboua/pi-shepherdr
 
+## 0.2.20
+
+- Requires Pi 1.2.0 or newer.
+
+  - Idle assignments and completion reports now apply Pi's full prompt and tool preparation.
+  - Fixed local and remote spawns failing during session startup.
+  - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
+
 ## 0.2.19
 
 - Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes.

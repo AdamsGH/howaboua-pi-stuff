@@ -1,5 +1,13 @@
 # @howaboua/pi-stuff
 
+## 0.0.103
+
+- Include bundled package updates:
+
+  - @howaboua/pi-github-watch: Initial release: opt-in GitHub issue and PR comment watches, with delayed PR checks and notifications that wake the same session across providers.
+  - @howaboua/pi-pet: Desktop attachment now uses Electron 44 and requires macOS 13 or newer, or a supported 64-bit Windows or Linux desktop. Linux ARMv7, 32-bit Windows and Linux Unity are no longer supported. The browser miniapp is unchanged.
+  - @howaboua/pi-shepherdr: Requires Pi 1.2.0 or newer. - Idle assignments and completion reports now apply Pi's full prompt and tool preparation. - Fixed local and remote spawns failing during session startup. - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
+
 ## 0.0.102
 
 - Include bundled package updates:

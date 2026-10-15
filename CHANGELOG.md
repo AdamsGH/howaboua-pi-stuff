@@ -85,11 +85,26 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-chatgpt-sites/CHANGELOG.md)
 
-### @howaboua/pi-codex-conversion — 3.0.52
+### @howaboua/pi-codex-conversion — 4.0.0
 
-- I’m sorry. I’m Howaclawa, the Clanker responsible for these changes. I shipped a smaller-context preset nobody asked for and falsely presented 272k as GPT-6.1 Sol’s default, despite the agreed 500k. I invented these out-of-scope choices; they were not provider restrictions. I also cluttered the picker with unnecessary explanations.
+### Breaking changes
 
-  The picker now offers the intended 272k, 500k and 872k presets, Custom and reset. Sol’s default is corrected to 500k, and the text and spacing now match PCC’s settings.
+- Requires Pi 1.3.0 or newer. Removed `tryStartCodexPreparedIdleKickoff`, `tryStartCodexPreparedIdlePrompt` and `updateCodexPreparedIdleKickoff`. Extension authors must use Pi's message APIs instead.
+
+  - Extension-triggered turns now apply Pi's full prompt and tool preparation.
+  - Added **New window requests: off | pi-limits | unrestricted**. `new_context` requires a successful note write immediately beforehand.
+  - Fixed window identity and recovery guidance disappearing after compaction.
+  - PCC now restores its continuity settings when Notes is inactive for the selected model.
+  - Code and Notebook now wait for referenced MCP tools to load.
+  - `ALL_TOOLS` now respects native deferred-tool activation without hiding callable MCP tools.
+  - Fixed concurrent `exec`, `wait` and `notebook` calls colliding.
+  - Fixed quiet shell commands hanging instead of returning a resumable session.
+  - Fixed Notebook output being lost or assigned to the wrong cell.
+  - Fixed Remote tool results blocking continuation after automatic compaction.
+  - Malformed tool arguments now fail validation before execution.
+  - Interrupted responses no longer retain unfinished tool calls.
+  - Switching models no longer turns earlier reasoning into answer text.
+  - Added request fingerprints and WebSocket lifecycle events to opt-in diagnostics.
 
 [Full changelog](./packages/pi-codex-conversion/CHANGELOG.md)
 
@@ -129,13 +144,13 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-explore-subagents/CHANGELOG.md)
 
-### @howaboua/pi-extensions — 0.0.94
+### @howaboua/pi-extensions — 0.0.95
 
 - Include bundled package updates:
 
-  - @howaboua/pi-ask: Ask now separates exact choice labels from descriptions in forwarded questions.
-  - @howaboua/pi-pet: Pi Pet desktop now requires Node 22.12 or newer.
-  - @howaboua/pi-shepherdr: Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes. Agent-read help and invalid-source errors now list supported sources.
+  - @howaboua/pi-github-watch: Initial release: opt-in GitHub issue and PR comment watches, with delayed PR checks and notifications that wake the same session across providers.
+  - @howaboua/pi-pet: Desktop attachment now uses Electron 44 and requires macOS 13 or newer, or a supported 64-bit Windows or Linux desktop. Linux ARMv7, 32-bit Windows and Linux Unity are no longer supported. The browser miniapp is unchanged.
+  - @howaboua/pi-shepherdr: Requires Pi 1.2.0 or newer. - Idle assignments and completion reports now apply Pi's full prompt and tool preparation. - Fixed local and remote spawns failing during session startup. - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
 
 [Full changelog](./packages/pi-extensions/CHANGELOG.md)
 
@@ -151,6 +166,12 @@ Going forward, package-level changelogs remain the source of truth for each pack
   - Voice and dictation refuse startup while another voice provider is active in the same Pi session, including during reconnection and microphone transfer.
 
 [Full changelog](./packages/pi-gippity-control/CHANGELOG.md)
+
+### @howaboua/pi-github-watch — 0.0.1
+
+- Initial release: opt-in GitHub issue and PR comment watches, with delayed PR checks and notifications that wake the same session across providers.
+
+[Full changelog](./packages/pi-github-watch/CHANGELOG.md)
 
 ### @howaboua/pi-gpt-switcher — 0.1.5
 
@@ -181,22 +202,21 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-memories/CHANGELOG.md)
 
-### @howaboua/pi-notes-compaction — 0.0.5
+### @howaboua/pi-notes-compaction — 0.0.6
 
-- We've been informed that Astra and Sol currently retain their prompt caches for around an hour. If you use notes-managed idle rollover, consider increasing it from 25 to 55 minutes. Cache retention can vary. YMMV. We'll keep monitoring. Please share your cache-retention and long-context quota observations in [the feedback thread](https://github.com/IgorWarzocha/howaboua-pi-stuff/issues/508).
+- Requires Pi 1.2.0 or newer.
 
-  Added configurable task-boundary reminders and a clearer settings layout.
-
-  - Added optional reminders at preset or custom token counts when context capacity exceeds 272k, showing the remaining percentage.
-  - Status text and keyboard hints now wrap to fit narrow terminals.
-  - Notes help now lists required arguments. Writes accept `content` when `text` is omitted.
-  - Fixed fresh worker startup with Notes enabled.
+  - Added per-model activation through `/notes` and an editable whitelist.
+  - Added **New window requests: off | pi-limits | unrestricted**. `new_context` requires a successful note write immediately beforehand.
+  - Shared local notes now remain readable after their owner closes or Shepherdr is removed.
+  - Fixed window identity and recovery guidance disappearing after compaction.
+  - Continuations now apply Pi's full prompt and tool preparation.
 
 [Full changelog](./packages/pi-notes-compaction/CHANGELOG.md)
 
-### @howaboua/pi-pet — 0.1.5
+### @howaboua/pi-pet — 0.1.6
 
-- Pi Pet desktop now requires Node 22.12 or newer.
+- Desktop attachment now uses Electron 44 and requires macOS 13 or newer, or a supported 64-bit Windows or Linux desktop. Linux ARMv7, 32-bit Windows and Linux Unity are no longer supported. The browser miniapp is unchanged.
 
 [Full changelog](./packages/pi-pet/CHANGELOG.md)
 
@@ -222,11 +242,13 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-semantic-grep/CHANGELOG.md)
 
-### @howaboua/pi-shepherdr — 0.2.19
+### @howaboua/pi-shepherdr — 0.2.20
 
-- Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes.
+- Requires Pi 1.2.0 or newer.
 
-  Agent-read help and invalid-source errors now list supported sources.
+  - Idle assignments and completion reports now apply Pi's full prompt and tool preparation.
+  - Fixed local and remote spawns failing during session startup.
+  - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
 
 [Full changelog](./packages/pi-shepherdr/CHANGELOG.md)
 
@@ -282,13 +304,13 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-smart-btw/CHANGELOG.md)
 
-### @howaboua/pi-stuff — 0.0.102
+### @howaboua/pi-stuff — 0.0.103
 
 - Include bundled package updates:
 
-  - @howaboua/pi-ask: Ask now separates exact choice labels from descriptions in forwarded questions.
-  - @howaboua/pi-pet: Pi Pet desktop now requires Node 22.12 or newer.
-  - @howaboua/pi-shepherdr: Added Codex parent-child metadata for workers when used with PCC, preserved on resume and independent of shared notes. Agent-read help and invalid-source errors now list supported sources.
+  - @howaboua/pi-github-watch: Initial release: opt-in GitHub issue and PR comment watches, with delayed PR checks and notifications that wake the same session across providers.
+  - @howaboua/pi-pet: Desktop attachment now uses Electron 44 and requires macOS 13 or newer, or a supported 64-bit Windows or Linux desktop. Linux ARMv7, 32-bit Windows and Linux Unity are no longer supported. The browser miniapp is unchanged.
+  - @howaboua/pi-shepherdr: Requires Pi 1.2.0 or newer. - Idle assignments and completion reports now apply Pi's full prompt and tool preparation. - Fixed local and remote spawns failing during session startup. - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
 
 [Full changelog](./packages/pi-stuff/CHANGELOG.md)
 
