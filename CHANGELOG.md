@@ -202,15 +202,9 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-memories/CHANGELOG.md)
 
-### @howaboua/pi-notes-compaction — 0.0.6
+### @howaboua/pi-notes-compaction — 0.0.7
 
-- Requires Pi 1.2.0 or newer.
-
-  - Added per-model activation through `/notes` and an editable whitelist.
-  - Added **New window requests: off | pi-limits | unrestricted**. `new_context` requires a successful note write immediately beforehand.
-  - Shared local notes now remain readable after their owner closes or Shepherdr is removed.
-  - Fixed window identity and recovery guidance disappearing after compaction.
-  - Continuations now apply Pi's full prompt and tool preparation.
+- Shared local agent history now remains readable after its owner closes or Shepherdr is removed.
 
 [Full changelog](./packages/pi-notes-compaction/CHANGELOG.md)
 
