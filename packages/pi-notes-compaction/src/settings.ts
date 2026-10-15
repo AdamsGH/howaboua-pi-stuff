@@ -50,6 +50,22 @@ export function readSettings(path: string): NotesSettings {
 		throw new Error(
 			"Invalid notes settings. Save a setting in /notes, then reload Pi.",
 		);
+	const active = "active" in settings ? settings.active : "all";
+	if (active !== "all" && active !== "whitelist")
+		throw new Error(
+			`Invalid active setting in ${path}. Use "all" or "whitelist", then reload Pi.`,
+		);
+	const modelWhitelist =
+		"modelWhitelist" in settings
+			? settings.modelWhitelist
+			: [...DEFAULT_MODEL_WHITELIST];
+	if (
+		!Array.isArray(modelWhitelist) ||
+		!modelWhitelist.every((id): id is string => typeof id === "string")
+	)
+		throw new Error(
+			`Invalid modelWhitelist in ${path}. Use an array of model ID strings, then reload Pi.`,
+		);
 	const idleMinutes = "idleMinutes" in settings ? settings.idleMinutes : 0;
 	const newWindowRequests =
 		"newWindowRequests" in settings
@@ -74,14 +90,8 @@ export function readSettings(path: string): NotesSettings {
 			"Invalid idle rollover interval. Choose off, 5, 15, 25 or 55 minutes.",
 		);
 	return {
-		active:
-			"active" in settings
-				? (settings.active as NotesSettings["active"])
-				: "all",
-		modelWhitelist:
-			"modelWhitelist" in settings
-				? (settings.modelWhitelist as string[])
-				: [...DEFAULT_MODEL_WHITELIST],
+		active,
+		modelWhitelist,
 		normalCompaction: settings.normalCompaction,
 		newWindowRequests: newWindowRequests as NewWindowRequests,
 		idleMinutes: idleMinutes as IdleMinutes,
