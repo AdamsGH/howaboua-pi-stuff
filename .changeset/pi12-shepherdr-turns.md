@@ -2,10 +2,9 @@
 "@howaboua/pi-shepherdr": patch
 ---
 
-Requires Pi 1.2.0 or newer. Idle agent tasks and completion reports now start fully prepared extension turns without synthetic user prompts. Slash commands and prompt templates retain normal user-input handling.
+Requires Pi 1.2.0 or newer.
 
-Fixed intermittent local and cross-machine spawn failures by waiting for session startup to finish before accepting shared-context bindings or peer tasks.
-
-Fixed false shared-context ownership errors when starting, forking or reopening sessions.
-
-Agent supervision reminders now distinguish other agents' assignments from the current task after compaction.
+- Idle assignments and completion reports now apply Pi's full prompt and tool preparation.
+- Fixed local and remote spawns failing during session startup.
+- Fixed shared-context ownership errors after starting, forking or reopening sessions.
+- Supervision reminders now distinguish other agents' tasks from the current task after compaction.

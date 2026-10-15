@@ -2,18 +2,19 @@
 "@howaboua/pi-codex-conversion": major
 ---
 
-Requires Pi 1.3.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `tryStartCodexPreparedIdlePrompt` and `updateCodexPreparedIdleKickoff` exports. Extensions should start turns through Pi's message APIs.
+Requires Pi 1.3.0 or newer. Removed `tryStartCodexPreparedIdleKickoff`, `tryStartCodexPreparedIdlePrompt` and `updateCodexPreparedIdleKickoff`. Extension authors must use Pi's message APIs instead.
 
-- Extension-triggered turns now use Pi's full preparation without synthetic user prompts, including context-window continuations and voice requests.
-- Malformed final tool arguments now fail validation instead of executing with partially parsed fields.
-- Switching models no longer replays the previous model's reasoning as visible answer text.
-- Code and Notebook now wait for MCP servers named in an exec cell before capturing its tools. `ALL_TOOLS` waits for all enabled servers.
-- Code and Notebook now list native deferred extension tools in `ALL_TOOLS` only while active in Pi. They remain callable by name while inactive. Callable MCP tools remain discoverable, and visibility changes leave standing tool instructions unchanged.
-- Fixed concurrent exec, wait and notebook calls colliding with the active Notebook kernel. Outer calls now run sequentially; tool calls within a cell can still run in parallel.
-- PCC now resumes its own continuity settings when Notes Compaction is inactive for the selected model, without bringing retired conversation back into context.
-- Fixed silent shell commands blocking Code and Notebook indefinitely. Commands now yield resumable sessions while preserving output-aware waits and polling backoff; completed output remains available after the native process expires.
-- Fixed Notebook cells losing queued output or attributing it to the next cell, including when execution fails.
-- Fixed Remote tool results preventing an ongoing run from continuing after automatic compaction.
-- Added metadata-only request fingerprints and WebSocket lifecycle events to cache diagnostic logs, including idle disconnects and client-initiated resets.
-- Context-window identity and recovery guidance now survive compaction, including using history when no checkpoint is available. Guidance, tool descriptions and reminders explain persistent notes, self-contained checkpoints and how to resume for every model.
-- Added **New window requests: off | pi-limits | unrestricted**, independent of the compaction method. `new_context` now requires a successful note write immediately before the request. Pi-limited requests continue in the same window when Pi has nothing to compact.
+- Extension-triggered turns now apply Pi's full prompt and tool preparation.
+- Added **New window requests: off | pi-limits | unrestricted**. `new_context` requires a successful note write immediately beforehand.
+- Fixed window identity and recovery guidance disappearing after compaction.
+- PCC now restores its continuity settings when Notes is inactive for the selected model.
+- Code and Notebook now wait for referenced MCP tools to load.
+- `ALL_TOOLS` now respects native deferred-tool activation without hiding callable MCP tools.
+- Fixed concurrent `exec`, `wait` and `notebook` calls colliding.
+- Fixed quiet shell commands hanging instead of returning a resumable session.
+- Fixed Notebook output being lost or assigned to the wrong cell.
+- Fixed Remote tool results blocking continuation after automatic compaction.
+- Malformed tool arguments now fail validation before execution.
+- Interrupted responses no longer retain unfinished tool calls.
+- Switching models no longer turns earlier reasoning into answer text.
+- Added request fingerprints and WebSocket lifecycle events to opt-in diagnostics.
