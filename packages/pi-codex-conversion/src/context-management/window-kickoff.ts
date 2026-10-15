@@ -128,7 +128,7 @@ export class CodexContextWindowKickoff {
 			this.onContinue?.("Continue.");
 			pi.sendMessage({
 				customType: "codex-context-continuation",
-				content: "Continue from the saved context notes.",
+				content: "Read your saved notes and resume the task.",
 				display: false,
 			}, { triggerTurn: true });
 		}

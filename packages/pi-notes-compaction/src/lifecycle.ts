@@ -188,7 +188,7 @@ export class NotesLifecycle {
 			)
 		)
 			throw new Error(
-				"Save a checkpoint note immediately before requesting a new context window. Wait for the write to finish successfully, then call new_context.",
+				"Save your progress with notes, wait for the write to succeed, then call new_context next.",
 			);
 		this.rollover = {
 			sessionId: ctx.sessionManager.getSessionId(),
@@ -219,7 +219,7 @@ export class NotesLifecycle {
 			this.pi.sendMessage(
 				{
 					customType: "notes-compaction:continuation",
-					content: "Continue from the saved context notes.",
+					content: "Read your saved notes and resume the task.",
 					display: false,
 				},
 				{ triggerTurn: true },
@@ -288,7 +288,7 @@ export class NotesLifecycle {
 										{
 											customType: "notes-compaction:continuation",
 											content:
-												"Pi found no history eligible for compaction. Continue in the current context window. Do not repeat the window request until more conversation has accumulated.",
+												"Not enough history to compact. Continue here; wait for more conversation before calling new_context again.",
 											display: true,
 										},
 										{ triggerTurn: true },
@@ -322,7 +322,7 @@ export class NotesLifecycle {
 				{
 					customType: "notes-compaction:checkpoint:v1",
 					details: { requestId },
-					content: `<context_window_reminder>\nContext checkpoint requested. Save the current state with notes, then finish your response. The new window opens after this run settles. Do not call new_context. If saving fails, report the failure without rolling over.\n</context_window_reminder>${instructions?.trim() ? `\n\nCheckpoint guidance:\n${instructions}` : ""}`,
+					content: `<context_window_reminder>\nSave the task state in notes, then finish your reply. A new window opens automatically after your reply; do not call new_context. If saving fails, report the error.\n</context_window_reminder>${instructions?.trim() ? `\n\nCheckpoint guidance:\n${instructions}` : ""}`,
 					display: true,
 				},
 				{ triggerTurn: true },

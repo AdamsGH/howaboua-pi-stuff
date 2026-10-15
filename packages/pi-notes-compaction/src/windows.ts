@@ -296,7 +296,7 @@ export class Windows {
 			content:
 				kind === "task-boundary"
 					? renderTaskBoundaryReminder(remainingPercent)
-					: `<context_window_reminder>\n${kind === "urgent" ? "Urgent: " : ""}${remainingPercent}% remaining. Checkpoint the active request, state and known history IDs in notes, then call new_context ${kind === "urgent" ? "now, before other work" : "before continuing work"}.\n</context_window_reminder>`,
+					: `<context_window_reminder>\n${kind === "urgent" ? "Urgent: " : ""}${remainingPercent}% context remaining. Save the task state in notes, then call new_context ${kind === "urgent" ? "now, before other work" : "before continuing work"}.\n</context_window_reminder>`,
 			display: true,
 			details: {
 				protocol: 1,

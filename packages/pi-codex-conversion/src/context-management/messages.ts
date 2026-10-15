@@ -79,13 +79,13 @@ export function renderContextWindowMessage(
 
 export function renderContextWindowReminder(remainingPercent: number, urgent: boolean): string {
 	return `<context_window_reminder>
-${urgent ? "Urgent: " : ""}${remainingPercent}% remaining. Checkpoint the active request, state and known history IDs in notes, then call new_context ${urgent ? "now, before other work" : "before continuing work"}.
+${urgent ? "Urgent: " : ""}${remainingPercent}% context remaining. Save the task state in notes, then call new_context ${urgent ? "now, before other work" : "before continuing work"}.
 </context_window_reminder>`;
 }
 
 export function renderManualContextCheckpoint(customInstructions?: string): string {
 	return `<context_window_reminder>
-Context checkpoint requested. Save the current state with notes, then finish your response. The new window opens after this run settles. Do not call new_context. If saving fails, report the failure without rolling over.
+Save the task state in notes, then finish your reply. A new window opens automatically after your reply; do not call new_context. If saving fails, report the error.
 </context_window_reminder>${customInstructions?.trim() ? `\n\nCheckpoint guidance from /compact:\n${customInstructions}` : ""}`;
 }
 

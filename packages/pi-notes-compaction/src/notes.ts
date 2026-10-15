@@ -327,7 +327,7 @@ export function useNotes(
 			} satisfies NoteReceipt);
 		} catch {
 			throw new Error(
-				`Note ${root}${path} reached local storage but its session receipt failed. Reread the selected branch before retrying.`,
+				`Note ${root}${path} was stored but not attached to this session. Read it before retrying the write.`,
 			);
 		}
 		return {

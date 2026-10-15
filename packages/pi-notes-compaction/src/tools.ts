@@ -223,8 +223,7 @@ function discovery(
 			),
 			...(namespace === "notes"
 				? {
-						usage:
-							'await tools.notes({ action: "read_file", path: "checkpoint" })',
+						usage: '{ "action": "read_file", "path": "checkpoint" }',
 						ranges:
 							"start_line/stop_line inclusive, 1-based; negative counts from end; 0/null/omitted uses first/last line; out-of-range clamps; reversed range returns empty content",
 						defaults:
@@ -348,7 +347,9 @@ function createQueryExecutor(
 ) {
 	const assertActive = () => {
 		if (!lifecycle.active)
-			throw new Error("Notes continuity is unavailable in this session");
+			throw new Error(
+				"Notes tools are inactive. Ask the user to check /notes.",
+			);
 	};
 	async function notes(
 		callId: string,
@@ -509,7 +510,9 @@ export function createTools(
 ): ToolDefinition[] {
 	const assertActive = () => {
 		if (!lifecycle.active)
-			throw new Error("Notes continuity is unavailable in this session");
+			throw new Error(
+				"Notes tools are inactive. Ask the user to check /notes.",
+			);
 	};
 	const queries = createQueryExecutor(pi, store, lifecycle);
 	return [
@@ -517,14 +520,14 @@ export function createTools(
 			name: "notes",
 			label: "notes",
 			description:
-				"Cross-window notes. write_file replaces; append_to_file adds. Virtual paths: relative uses current agent; cross-agent uses <agent>/notes[/path].",
+				"Persistent notes. write_file replaces; append_to_file adds. Virtual paths: relative uses current agent; cross-agent uses <agent>/notes[/path].",
 			parameters: NOTES_SCHEMA,
 			executionMode: "sequential",
 			prepareArguments(args) {
 				if (args === undefined) return {};
 				if (!args || typeof args !== "object" || Array.isArray(args))
 					throw new Error(
-						'Supply an action object: await tools.notes({ action: "read_file", path: "checkpoint" }); tools.notes() returns help',
+						'Supply an action object, e.g. { "action": "read_file", "path": "checkpoint" }. Use {} for help',
 					);
 				const params = { ...args } as Record<string, unknown>;
 				if (
@@ -551,7 +554,7 @@ export function createTools(
 						];
 					if (!schema || !Check(schema, value))
 						throw new Error(
-							`Invalid notes ${field}; call tools.notes() for exact arguments`,
+							`Invalid notes ${field}; use {} for exact arguments`,
 						);
 				}
 				return params;
@@ -563,7 +566,7 @@ export function createTools(
 			name: "history",
 			label: "history",
 			description:
-				"Prior-window detail. Pass IDs unchanged. Search, never browse",
+				"Search earlier conversation, don't browse it. Pass returned IDs unchanged",
 			parameters: HISTORY_SCHEMA,
 			prepareArguments(args) {
 				return args === undefined ? {} : args;
@@ -574,7 +577,8 @@ export function createTools(
 		{
 			name: "new_context",
 			label: "new_context",
-			description: "Start a new context window",
+			description:
+				"Start fresh from saved notes; recover earlier conversation through history",
 			parameters: Type.Object({}, { additionalProperties: false }),
 			exposure: "model-only",
 			executionMode: "sequential",

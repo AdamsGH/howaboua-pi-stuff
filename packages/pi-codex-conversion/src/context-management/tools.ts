@@ -43,7 +43,7 @@ export function createContextWindowTools(
 		{
 			name: "new_context",
 			label: "new_context",
-			description: "Start a new context window",
+			description: "Start fresh from saved notes; recover earlier conversation through history",
 			parameters: EMPTY_PARAMETERS,
 			...newContextRenderers,
 			executionMode: "sequential",
@@ -53,7 +53,7 @@ export function createContextWindowTools(
 				const identity = state.contextWindows.currentIdentity();
 				if (!identity || !hasFreshContextNotes(ctx.sessionManager.getBranch(), identity.currentWindowId,
 					plan.contextManagementMode, false, _id))
-					throw new Error("Save a context note immediately before requesting a new window, then call new_context.");
+					throw new Error("Save your progress with notes, wait for the write to succeed, then call new_context next.");
 				if (state.contextKickoff.hasIdleInput) return {
 					content: [{ type: "text", text: "A new window will open after this checkpoint. Save your notes and finish your reply." }],
 					details: { started: false },
