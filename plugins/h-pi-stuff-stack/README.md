@@ -18,4 +18,6 @@ Cursor discovers these from `skills/`. Each directory includes its references.
 
 ## Install
 
-Load it for Howaboua cloud agents from this repository. Do not submit it at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish). Public marketplace review is for `h-stack` only.
+An agent that opens this repository does not load `plugins/h-pi-stuff-stack` just because the directory is committed. The same skill directories are copied into `.cursor/skills/`, which Cursor loads with no marketplace install. Those are real copies, not symlinks.
+
+The plugin directory is the installable bundle, with `.cursor-plugin/plugin.json` and skills discovered from `skills/`. Do not submit it at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish). The root marketplace manifest lists only `h-stack`.
