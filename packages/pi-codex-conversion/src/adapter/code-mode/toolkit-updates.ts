@@ -21,6 +21,7 @@ interface ToolkitUpdate extends CodexDeveloperMessageDetails {
 	compactionId: string | null;
 	content: string;
 	tools: ToolkitTool[];
+	unlisted?: string[];
 	namespaces: Record<string, string>;
 }
 
@@ -32,6 +33,7 @@ export function readToolkitUpdate(value: unknown): ToolkitUpdate {
 		|| !("tools" in value) || !Array.isArray(value.tools)
 		|| !value.tools.every((tool: unknown) => tool && typeof tool === "object"
 			&& ["name", "description", "contract", "namespace"].every((key) => typeof (tool as Record<string, unknown>)[key] === "string"))
+		|| ("unlisted" in value && (!Array.isArray(value.unlisted) || !value.unlisted.every((name: unknown) => typeof name === "string")))
 		|| !("namespaces" in value) || !value.namespaces || typeof value.namespaces !== "object"
 		|| Array.isArray(value.namespaces) || !Object.values(value.namespaces).every((description) => typeof description === "string"))
 		throw new Error("Malformed persisted toolkit update");
@@ -75,7 +77,10 @@ export function recordCodeModeToolkit(
 	})).sort((left, right) => left.name.localeCompare(right.name));
 	const namespaces = Object.fromEntries(discoverable.flatMap((tool) => tool.namespace
 		? [[tool.namespace.name, tool.namespace.description?.trim() ?? ""]] : []).sort(([left], [right]) => left!.localeCompare(right!)));
-	if (previous && JSON.stringify([previous.tools, previous.namespaces]) === JSON.stringify([tools, namespaces])) return false;
+	// Remember only previously announced tools, so a later removal can revoke the still-callable notice.
+	const known = previous ? [...previous.tools.map((tool) => tool.name), ...(previous.unlisted ?? [])] : [];
+	const unlisted = known.filter((name) => !current.has(name) && callable.has(name)).sort();
+	if (previous && JSON.stringify([previous.tools, previous.namespaces, previous.unlisted ?? []]) === JSON.stringify([tools, namespaces, unlisted])) return false;
 	const oldTools = new Map(previous?.tools.map((tool) => [tool.name, tool]));
 	const added = tools.filter((tool) => !oldTools.has(tool.name));
 	const changed = tools.filter((tool) => previous
@@ -83,8 +88,9 @@ export function recordCodeModeToolkit(
 		: standingPromoted.has(tool.name) && tool.contract !== toolContract(standingPromoted.get(tool.name)!));
 	// A new context must override standing contracts even when the earlier removal update was lost.
 	const removed = previous
-		? previous.tools.filter((tool) => !callable.has(tool.name)).map((tool) => tool.name)
+		? known.filter((name) => !callable.has(name))
 		: [...standingPromoted.keys()].filter((name) => !callable.has(name));
+	const newlyUnlisted = unlisted.filter((name) => !previous?.unlisted?.includes(name));
 	if (!previous && tools.length === 0 && removed.length === 0) return false;
 	const updateLines = (entries: ToolkitTool[]) => entries.flatMap((entry) => {
 		const tool = current.get(entry.name)!;
@@ -101,11 +107,12 @@ export function recordCodeModeToolkit(
 		...(!previous ? toolLines(tools.filter((tool) => current.get(tool.name)!.deferLoading))
 			: added.length ? ["Added:", ...updateLines(added)] : []),
 		...(changed.length ? ["Changed:", ...updateLines(changed)] : []),
+		...(newlyUnlisted.length ? [`Unlisted: ${newlyUnlisted.join(", ")}. Still callable by name; omitted from ALL_TOOLS`] : []),
 		...(removed.length ? [`Removed: ${removed.join(", ")}. No longer callable; ignore earlier usage`] : []),
 	].join("\n");
 	const id = randomUUID();
 	pi.appendEntry(CODEX_TOOLKIT_UPDATE_TYPE, {
-		protocol: 1, id, rootId: previous?.rootId ?? id, compactionId, content, tools, namespaces,
+		protocol: 1, id, rootId: previous?.rootId ?? id, compactionId, content, tools, namespaces, unlisted,
 	} satisfies ToolkitUpdate);
 	return true;
 }

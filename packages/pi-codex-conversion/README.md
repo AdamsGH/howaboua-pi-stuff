@@ -256,7 +256,7 @@ text(status);
 
 ### Pi extension and MCP tools
 
-Pi-callable extension tools automatically appear in `tools` and `ALL_TOOLS`, with no extra registration. An [explicit integration](#extension-apis) takes precedence for the same Pi tool, including its custom behavior and activation gate. Hidden and model-only tools are not imported.
+Pi-callable extension tools automatically appear in `tools`, with no extra registration. `ALL_TOOLS` lists active direct tools and tools with `codemode` exposure. Native `deferred` tools appear in the catalogue only while active in Pi, but remain callable by name while inactive. Catalogue changes leave standing tool instructions unchanged. An [explicit integration](#extension-apis) takes precedence for the same Pi tool, including its custom behaviour and activation gate. Hidden and model-only tools are not imported.
 
 Configure MCP servers once in Pi's built-in MCP extension. Its callable tools and resource helpers use the same bridge. Pi's extension switches, tool restrictions and disabled servers are respected. Pi retains connection management, authentication, permissions and tool hooks; its native `codemode` extension is not required.
 

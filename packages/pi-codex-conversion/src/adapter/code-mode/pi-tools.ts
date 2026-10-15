@@ -14,6 +14,7 @@ export function createPiCodeModeBridge(pi: ExtensionAPI): {
 		getTools: (reservedNames = []) => tools.filter((tool) => !reservedNames.includes(tool.name)),
 		prepareLoadout(loadout) {
 			const registered = new Map(pi.getAllTools().map((tool) => [tool.name, tool]));
+			const declared = new Set(loadout.declared.map((tool) => tool.name));
 			tools = loadout.callable.filter((tool) => tool.name !== "codemode"
 				&& !ALL_CODEX_ADAPTER_TOOL_NAMES.includes(tool.name)
 				&& registered.get(tool.name)?.sourceInfo?.path !== "builtin:tool-search").map((tool) => {
@@ -28,7 +29,7 @@ export function createPiCodeModeBridge(pi: ExtensionAPI): {
 					promptGuidelines: metadata?.promptGuidelines,
 					kind: "function",
 					deferLoading: true,
-					discoverWhenDeferred: true,
+					discoverWhenDeferred: loadout.getExposure(tool.name) !== "deferred" || declared.has(tool.name),
 					...(mcp ? { discovery: "server" as const } : {}),
 					executionPipeline: "pi",
 					inputSchema: tool.parameters,
