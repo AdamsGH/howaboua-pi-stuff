@@ -33,6 +33,8 @@ The tune is saved where this Cursor surface already keeps durable instructions. 
 
 Listing on the Cursor Marketplace is a manual review. Submit this repository at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish). Cursor reviews it before the plugin is listed. This plugin is not an npm package. A changeset will not publish it.
 
-After it is listed, install h-stack from the Marketplace. A team admin can also import this repository as a team marketplace. The root marketplace manifest lists only `h-stack`.
+After it is listed, install h-stack from the Marketplace. A team marketplace import of this repository also installs only `h-stack`, because the root marketplace manifest lists only that plugin.
+
+`h-pi-stuff-stack` is not listed. A marketplace install does not include it. This repository loads those skills from `.cursor/skills/`.
 
 To try it before that review, copy this plugin directory into Cursor's local plugin imports and reload the window. Copy the files. Cursor rejects a symlink that points outside the plugin directory, and a marketplace install copies only the plugin tree.
