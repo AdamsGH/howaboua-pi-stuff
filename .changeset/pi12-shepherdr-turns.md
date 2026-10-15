@@ -7,3 +7,5 @@ Requires Pi 1.2.0 or newer. Idle agent tasks and completion reports now start fu
 Fixed intermittent local and cross-machine spawn failures by waiting for session startup to finish before accepting shared-context bindings or peer tasks.
 
 Fixed false shared-context ownership errors when starting, forking or reopening sessions.
+
+Agent supervision reminders now distinguish other agents' assignments from the current task after compaction.
