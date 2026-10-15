@@ -1,5 +1,9 @@
 # @howaboua/pi-notes-compaction
 
+## 0.0.7
+
+- Shared local agent history now remains readable after its owner closes or Shepherdr is removed.
+
 ## 0.0.6
 
 - Requires Pi 1.2.0 or newer.
