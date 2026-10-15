@@ -2,9 +2,11 @@
 "@howaboua/pi-codex-conversion": major
 ---
 
-Requires Pi 1.2.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `tryStartCodexPreparedIdlePrompt` and `updateCodexPreparedIdleKickoff` exports. Extensions should start turns through Pi's message APIs.
+Requires Pi 1.3.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `tryStartCodexPreparedIdlePrompt` and `updateCodexPreparedIdleKickoff` exports. Extensions should start turns through Pi's message APIs.
 
 - Extension-triggered turns now use Pi's full preparation without synthetic user prompts, including context-window continuations and voice requests.
+- Malformed final tool arguments now fail validation instead of executing with partially parsed fields.
+- Switching models no longer replays the previous model's reasoning as visible answer text.
 - Code and Notebook now wait for MCP servers named in an exec cell before capturing its tools. `ALL_TOOLS` waits for all enabled servers.
 - Code and Notebook now list native deferred extension tools in `ALL_TOOLS` only while active in Pi. They remain callable by name while inactive. Callable MCP tools remain discoverable, and visibility changes leave standing tool instructions unchanged.
 - Fixed concurrent exec, wait and notebook calls colliding with the active Notebook kernel. Outer calls now run sequentially; tool calls within a cell can still run in parallel.
