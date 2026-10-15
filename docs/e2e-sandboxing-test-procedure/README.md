@@ -2,6 +2,13 @@
 
 Our E2E reviews pair an implementing agent with a dedicated sandbox reviewer. The implementer works in the host checkout. The reviewer controls a disposable VM and uses the changed application: Pi, its extensions, Herdr agents and, where relevant, the Deno Notebook kernel.
 
+Two Pi extensions provide the machinery:
+
+- **[Pi Sandbox](../../packages/pi-sandbox/README.md)** (`@howaboua/pi-sandbox`) gives the reviewer the `sandbox` tool to create, start and stop VMs, run guest commands, read and write files, and inspect logs. It is built on Gondolin's QEMU microVMs. The reviewer controls it from the host.
+- **[Shepherdr](../../packages/pi-shepherdr/README.md)** (`@howaboua/pi-shepherdr`) gives the implementer the `agents` tool to spawn the `sandbox-reviewer` profile in Herdr, exchange messages and receive completion reports. The reviewer is another Pi agent, not a feature built into the VM.
+
+[Agent Board](../../packages/pi-agent-board/README.md) holds shared findings and retest discussions. [Notes Compaction](../../packages/pi-notes-compaction/README.md) keeps resumable checkpoints as agents move through context windows.
+
 The review is driven by the branch diff. We do not have a fixed E2E suite that every change runs through. The reviewer builds scenarios and small probes around the changed workflows, then works with the implementer to reproduce failures and retest fixes.
 
 ```mermaid
@@ -20,6 +27,26 @@ sequenceDiagram
     R-->>I: Results and remaining gaps
     R->>V: Close test processes and stop VM
 ```
+
+## What Pi Sandbox runs for us
+
+Pi Sandbox is the agent-facing control layer for a real virtual machine. It starts a separate controller process on the host. That controller uses Gondolin to run QEMU with hardware virtualisation, a guest filesystem and configured CPU, memory and disk resources.
+
+```mermaid
+flowchart LR
+    Agent[Reviewer in host Pi] --> Tool[Pi Sandbox extension]
+    Tool --> Controller[Persistent host controller]
+    Controller --> Gondolin[Gondolin and QEMU]
+    Gondolin --> Guest[Guest Pi, Herdr and candidate extensions]
+```
+
+The controller outlives the calling Pi session. A reviewer can change context, reload Pi or exit without automatically killing the VM. The agent explicitly starts and stops named instances through the tool.
+
+Inside the guest, the extension runs shell commands, exposes their output and exit status, and provides file reads and writes. Long commands return a handle so the reviewer can retrieve later output or stop the process. Ending a wait does not kill the guest command. The extension also supports supervised services, localhost previews and a temporary SSH terminal for interactive work.
+
+For our reviews, this gives the agent somewhere to install and build the candidate, launch Pi and Herdr, create test fixtures, inspect logs and repeat a failing workflow. The guest has its own filesystem. Our repository setup script copies a candidate into it rather than mounting the live host checkout. Pi Sandbox supplies the environment controls; it does not install a reviewer or decide what counts as a passing test.
+
+Stopping an instance checkpoints its disk. Installed tools, saved sessions and evidence can survive reopening, but memory and running processes do not. That is why we can reuse a provisioned guest while still restarting the application after a candidate refresh. The image itself is supplied separately; the extension does not ship one.
 
 ## From a diff to a review
 
