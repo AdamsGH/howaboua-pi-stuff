@@ -81,6 +81,8 @@ These packages are no longer maintained or published. Their source remains avail
 
 The [extension API guide](./docs/extension-apis.md) covers Board and Notes with other subagent extensions, PCC tool and context APIs, voice tools, and browser miniapps. It includes lifecycle diagrams, public contracts and small integration examples.
 
+[How we test changes in a sandbox](./docs/e2e-sandboxing-test-procedure/) explains our reviewer workflow, model and provider comparisons, and headless application checks.
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md). Package-level changelogs remain beside packages that have them.
