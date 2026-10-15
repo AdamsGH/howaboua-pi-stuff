@@ -45,12 +45,10 @@ export function registerPeerInbox(
 	pi.on("agent_settled", () => {
 		running = false;
 	});
-	pi.on("session_start", async (event, ctx) => {
+	pi.on("session_start", async () => {
 		await close?.();
 		close = undefined;
 		running = false;
-		if (event.reason !== "startup" && event.reason !== "reload")
-			await publish(ctx);
 	});
 	pi.on("resources_discover", async (_event, ctx) => publish(ctx));
 	pi.on("session_shutdown", async () => {

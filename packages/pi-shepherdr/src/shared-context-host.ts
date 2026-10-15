@@ -64,7 +64,7 @@ export async function registerSharedAgentContext(
 					shared.handle(ctx, request, signal),
 			);
 	};
-	pi.on("session_start", async (event, ctx) => {
+	pi.on("session_start", async () => {
 		await close?.();
 		close = undefined;
 		unregister?.();
@@ -110,8 +110,6 @@ export async function registerSharedAgentContext(
 				},
 			),
 		);
-		if (event.reason !== "startup" && event.reason !== "reload")
-			await publish(ctx);
 	});
 	pi.on("resources_discover", async (_event, ctx) => publish(ctx));
 	pi.on("session_shutdown", async () => {
