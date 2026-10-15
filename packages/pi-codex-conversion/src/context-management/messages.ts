@@ -49,9 +49,9 @@ export interface ContextWindowCompactionDetails {
 }
 
 const CONTEXT_WINDOW_GUIDANCE = `<context_window_guidance>
-Keep one checkpoint per task at a stable path: request, constraints, decisions, progress, next steps, history IDs. Replace stale state; mark completion in place. Keep reusable findings and deferred ideas in separate topic notes; link, don't copy. Recording isn't permission to implement.
+Notes persist across windows. Keep one checkpoint per task at a stable path, covering the request, constraints, decisions, progress, next steps and history IDs so you can resume without rereading the conversation. Replace stale state; mark completion in place. Keep reusable findings and deferred ideas in separate topic notes; link, don't copy. Recording isn't permission to implement.
 
-Save changed state after substantial work, before replying, and before new_context or handoff. Skip routine or unchanged state. Include checkpoint paths in handoffs. After rollover, read the checkpoint, then linked notes as needed; history only for missing details.
+Save changed state after substantial work, before replying, and before new_context or handoff. Skip routine or unchanged state. Include checkpoint paths in handoffs. After rollover, read the checkpoint, then linked notes as needed. History retrieves earlier conversation; use it only for missing details.
 </context_window_guidance>`;
 
 export function rewriteContextWindowGuidance(content: string): string {

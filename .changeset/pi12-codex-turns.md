@@ -13,5 +13,5 @@ Requires Pi 1.2.0 or newer. Removed the `tryStartCodexPreparedIdleKickoff`, `try
 - Fixed Notebook cells losing queued output or attributing it to the next cell, including when execution fails.
 - Fixed Remote tool results preventing an ongoing run from continuing after automatic compaction.
 - Added metadata-only request fingerprints and WebSocket lifecycle events to cache diagnostic logs, including idle disconnects and client-initiated resets.
-- Context-window identity and recovery guidance now survive compaction, including using history when no checkpoint is available.
+- Context-window identity and recovery guidance now survive compaction, including using history when no checkpoint is available. Guidance explains persistent notes and self-contained checkpoints for every model.
 - Added **New window requests: off | pi-limits | unrestricted**, independent of the compaction method. `new_context` now requires a successful note write immediately before the request. Pi-limited requests continue in the same window when Pi has nothing to compact.
