@@ -32,6 +32,14 @@ export function buildContextSettings(
 	const supportsV2 = isAdapterRuntime(plan) && plan.effectiveOpenAICodex;
 	const { continuity, historyStorage, method, v2UserMessageRetention } = config.compaction;
 	return [
+		...(!externalNotes && continuity !== "compaction" ? [setting({
+			id: "newWindowRequests", label: "New window requests",
+			currentValue: config.compaction.newWindowRequests,
+			values: ["off", "pi-limits", "unrestricted"],
+			description: "Agent requests only. Pi limits requires eligible history; unrestricted permits any size. Manual compaction and idle rollover are independent.",
+		}, (value, current) => ({ ...current, compaction: { ...current.compaction,
+			newWindowRequests: value === "off" || value === "pi-limits" ? value : "unrestricted",
+		} }))] : []),
 		...(!externalNotes ? [setting({
 			id: "taskBoundaryReminder", label: "Task-boundary reminder",
 			currentValue: taskBoundaryLabel(config.compaction.taskBoundaryReminder),

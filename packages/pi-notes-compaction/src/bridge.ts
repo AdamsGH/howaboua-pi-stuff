@@ -72,6 +72,7 @@ export interface NotesOwner {
 	projectBranch(entries: readonly SessionEntry[]): SessionEntry[];
 	/** Consult before compaction work; the owner's hook performs notes-only rollover. */
 	allowsCompaction?(reason: SessionBeforeCompactEvent["reason"]): boolean;
+	allowsWindowRequests?(): boolean;
 	canBind?(ctx: ExtensionContext): boolean;
 	snapshotNotes?(
 		entries: readonly SessionEntry[],

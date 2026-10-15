@@ -78,6 +78,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 		},
 		projectBranch: (entries) => lifecycle.windows.projectBranch(entries),
 		allowsCompaction: (reason) => lifecycle.allowsCompaction(reason),
+		allowsWindowRequests: () => lifecycle.newWindowRequests !== "off",
 		canBind: (ctx) =>
 			lifecycle.active &&
 			ctx.isIdle() &&
@@ -206,14 +207,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 			}
 			lifecycle.active = true;
 			lifecycle.initialize(ctx);
-			lifecycle.bridge?.configureTools?.(tools, ctx, {
-				notes: NOTES_USAGE,
-				history: HISTORY_USAGE,
-			});
-			if (!lifecycle.bridge)
-				pi.setActiveTools([
-					...new Set([...pi.getActiveTools(), ...TOOL_NAMES]),
-				]);
+			configureTools(ctx);
 			store.updateFile(sessionRef(ctx));
 		} catch (error) {
 			lifecycle.active = false;
@@ -221,9 +215,30 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 			ctx.ui.notify(`Notes continuity inactive: ${unavailable}`, "warning");
 		}
 	}
+	function configureTools(ctx: ExtensionContext): void {
+		if (lifecycle.bridge) {
+			lifecycle.bridge.configureTools?.(tools, ctx, {
+				notes: NOTES_USAGE,
+				history: HISTORY_USAGE,
+			});
+			return;
+		}
+		const names = TOOL_NAMES.filter(
+			(name) => name !== "new_context" || lifecycle.newWindowRequests !== "off",
+		);
+		pi.setActiveTools([
+			...new Set([
+				...pi
+					.getActiveTools()
+					.filter((name) => !TOOL_NAMES.some((tool) => tool === name)),
+				...names,
+			]),
+		]);
+	}
 	function applySettings(value: NotesSettings): void {
 		settings = value;
 		lifecycle.normalCompaction = value.normalCompaction;
+		lifecycle.newWindowRequests = value.newWindowRequests;
 		lifecycle.idleMinutes = value.idleMinutes;
 		lifecycle.taskBoundaryReminder = value.taskBoundaryReminder;
 	}
@@ -285,7 +300,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 		}
 	});
 	pi.on("turn_end", (event, ctx) => {
-		if (!lifecycle.active) return;
+		if (!lifecycle.active || lifecycle.newWindowRequests === "off") return;
 		const reminder = lifecycle.windows.reminder(
 			ctx,
 			event.message.role === "assistant" &&
@@ -362,6 +377,7 @@ export default function notesCompaction(pi: ExtensionAPI): void {
 				writeSettings(settingsPath, value);
 				applySettings(value);
 				refreshActivation(ctx);
+				if (lifecycle.active) configureTools(ctx);
 			};
 			const prune = async () => {
 				await ctx.waitForIdle();

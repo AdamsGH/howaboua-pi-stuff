@@ -7,7 +7,11 @@ import {
 	truncateToWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import { IDLE_MINUTES, type NotesSettings } from "./settings.js";
+import {
+	IDLE_MINUTES,
+	NEW_WINDOW_REQUESTS,
+	type NotesSettings,
+} from "./settings.js";
 import { TASK_BOUNDARY_PRESETS, taskBoundaryLabel } from "./task-boundary.js";
 
 export async function openNotesSettings(
@@ -43,6 +47,14 @@ export async function openNotesSettings(
 								"Use Pi/PCC compaction for /compact and new_context. Off uses notes-only rollover; /compact then waits for your next prompt.",
 							currentValue: settings.normalCompaction ? "on" : "off",
 							values: ["off", "on"],
+						},
+						{
+							id: "newWindowRequests",
+							label: "New window requests",
+							description:
+								"Off disables new_context. Pi-limits keeps the current window when Pi finds too little history to compact. Unrestricted accepts requests at any size. Normal compaction still chooses how windows roll over. Manual /compact and idle rollover are separate.",
+							currentValue: settings.newWindowRequests,
+							values: [...NEW_WINDOW_REQUESTS],
 						},
 						{
 							id: "taskBoundaryReminder",
@@ -102,7 +114,13 @@ export async function openNotesSettings(
 								});
 							else if (id === "compact")
 								options.save({ ...current, normalCompaction: value === "on" });
-							else if (id === "taskBoundaryReminder")
+							else if (id === "newWindowRequests") {
+								const newWindowRequests = NEW_WINDOW_REQUESTS.find(
+									(mode) => mode === value,
+								);
+								if (newWindowRequests)
+									options.save({ ...current, newWindowRequests });
+							} else if (id === "taskBoundaryReminder")
 								options.save({
 									...current,
 									taskBoundaryReminder:
@@ -126,11 +144,13 @@ export async function openNotesSettings(
 										: "Whitelist"
 									: id === "taskBoundaryReminder"
 										? taskBoundaryLabel(current.taskBoundaryReminder)
-										: id === "compact"
-											? current.normalCompaction
-												? "on"
-												: "off"
-											: idleValue(current.idleMinutes),
+										: id === "newWindowRequests"
+											? current.newWindowRequests
+											: id === "compact"
+												? current.normalCompaction
+													? "on"
+													: "off"
+												: idleValue(current.idleMinutes),
 							);
 							ctx.ui.notify(
 								`Could not save notes settings: ${String(error)}`,

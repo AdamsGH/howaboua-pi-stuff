@@ -14,9 +14,13 @@ import {
 	prepareBranchEntries,
 } from "@earendil-works/pi-coding-agent";
 import type { NotesBridge } from "./bridge.js";
-import { hasFreshNotes, NOTES_RUN_ENTRY } from "./fresh-notes.js";
+import {
+	hasFreshNotes,
+	hasPrecedingNoteWrite,
+	NOTES_RUN_ENTRY,
+} from "./fresh-notes.js";
 import { noteHints, sessionRef } from "./notes.js";
-import type { IdleMinutes } from "./settings.js";
+import type { IdleMinutes, NewWindowRequests } from "./settings.js";
 import type { NotesStore } from "./store.js";
 import {
 	SETTLEMENT_ENTRY,
@@ -39,16 +43,20 @@ interface HeldInput {
 	releasePrompt: string;
 	admissions: ((result: InputEventResult) => void)[];
 }
-interface Rollover {
+type Rollover = {
 	sessionId: string;
-	phase: "scheduled" | "compacting";
+	windowId: string | undefined;
 	triggerTurn: boolean;
-}
+} & (
+	| { phase: "scheduled" | "compacting" }
+	| { phase: "checking"; accepted?: AbortSignal }
+);
 
 export class NotesLifecycle {
 	readonly windows = new Windows();
 	active = false;
 	normalCompaction = false;
+	newWindowRequests: NewWindowRequests = "unrestricted";
 	idleMinutes: IdleMinutes = 0;
 	taskBoundaryReminder = 0;
 	bridge: NotesBridge | undefined;
@@ -164,11 +172,27 @@ export class NotesLifecycle {
 			runId,
 		);
 	}
-	requestRollover(ctx: ExtensionContext): boolean {
+	requestRollover(ctx: ExtensionContext, callId: string): boolean {
+		if (this.newWindowRequests === "off")
+			throw new Error(
+				"New window requests are disabled. Continue in the current window.",
+			);
 		if (this.checkpoint || this.held) return false;
 		if (this.rollover) return false;
+		if (
+			!hasPrecedingNoteWrite(
+				ctx.sessionManager.getBranch(),
+				this.windows.current?.currentWindowId,
+				this.runId,
+				callId,
+			)
+		)
+			throw new Error(
+				"Save a checkpoint note immediately before requesting a new context window. Wait for the write to finish successfully, then call new_context.",
+			);
 		this.rollover = {
 			sessionId: ctx.sessionManager.getSessionId(),
+			windowId: this.windows.current?.currentWindowId,
 			phase: "scheduled",
 			triggerTurn: true,
 		};
@@ -205,30 +229,77 @@ export class NotesLifecycle {
 		ctx: ExtensionContext,
 		triggerTurn: boolean,
 	): Promise<void> {
-		if (!this.normalCompaction) {
+		const policy = triggerTurn ? this.newWindowRequests : undefined;
+		const checkOnly = !this.normalCompaction && policy === "pi-limits";
+		if (!this.normalCompaction && !checkOnly) {
 			await this.openWindow(ctx, triggerTurn, true);
 			return;
 		}
 		const pending: Rollover = {
 			sessionId: ctx.sessionManager.getSessionId(),
-			phase: "compacting",
+			windowId: this.windows.current?.currentWindowId,
+			phase: checkOnly ? "checking" : "compacting",
 			triggerTurn,
 		};
 		this.rollover = pending;
 		await new Promise<void>((resolve, reject) => {
+			const current = () =>
+				this.active &&
+				this.rollover === pending &&
+				pending.sessionId === ctx.sessionManager.getSessionId() &&
+				pending.windowId === this.windows.current?.currentWindowId;
+			const finish = (trim: boolean) => {
+				this.rollover = undefined;
+				void this.openWindow(ctx, triggerTurn, trim).then(resolve, reject);
+			};
 			ctx.compact({
 				onComplete: () => {
-					if (
-						this.rollover !== pending ||
-						pending.sessionId !== ctx.sessionManager.getSessionId()
-					) {
+					if (!current()) {
 						reject(new Error("Session changed during compaction"));
 						return;
 					}
-					this.rollover = undefined;
-					void this.openWindow(ctx, triggerTurn, false).then(resolve, reject);
+					finish(false);
 				},
 				onError: (error) => {
+					if (current()) {
+						// Only our own accepted gate cancels a summary in favour of notes-only rollover.
+						if (
+							pending.phase === "checking" &&
+							pending.accepted &&
+							!pending.accepted.aborted &&
+							error.message === "Compaction cancelled"
+						) {
+							finish(true);
+							return;
+						}
+						if (
+							error.message === "Nothing to compact (session too small)" ||
+							error.message === "Already compacted"
+						) {
+							if (policy === "unrestricted") {
+								// A new identity need not retire history when Pi has no summary work.
+								finish(false);
+								return;
+							}
+							this.rollover = undefined;
+							try {
+								if (triggerTurn)
+									this.pi.sendMessage(
+										{
+											customType: "notes-compaction:continuation",
+											content:
+												"Pi found no history eligible for compaction. Continue in the current context window. Do not repeat the window request until more conversation has accumulated.",
+											display: true,
+										},
+										{ triggerTurn: true },
+									);
+								resolve();
+							} catch (error) {
+								reject(error);
+							}
+							return;
+						}
+					}
 					if (this.rollover === pending) this.rollover = undefined;
 					reject(error);
 				},
@@ -380,6 +451,10 @@ export class NotesLifecycle {
 		event: SessionBeforeCompactEvent,
 		ctx: ExtensionContext,
 	): { cancel: true } | undefined {
+		if (this.rollover?.phase === "checking" && event.reason === "manual") {
+			this.rollover.accepted = event.signal;
+			return { cancel: true };
+		}
 		if (this.allowsCompaction(event.reason)) {
 			// PCC owns preparation when bridged, including native checkpoint routes.
 			if (this.bridge) return;
@@ -455,6 +530,8 @@ export class NotesLifecycle {
 		return { cancel: true };
 	}
 	allowsCompaction(reason: SessionBeforeCompactEvent["reason"]): boolean {
+		if (this.rollover?.phase === "checking" && reason === "manual")
+			return false;
 		return (
 			!this.active ||
 			this.normalCompaction ||
@@ -556,7 +633,8 @@ export class NotesLifecycle {
 		const rollover = this.rollover;
 		if (
 			rollover?.phase === "scheduled" &&
-			rollover.sessionId === ctx.sessionManager.getSessionId()
+			rollover.sessionId === ctx.sessionManager.getSessionId() &&
+			rollover.windowId === this.windows.current?.currentWindowId
 		) {
 			this.rollover = undefined;
 			await this.roll(ctx, rollover.triggerTurn);

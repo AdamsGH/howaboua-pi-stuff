@@ -130,6 +130,7 @@ Choose under `/codex context`:
 | --- | --- | --- |
 | **Continuity strategy** | Compaction · Notes and history · Notes + history + compaction | Always |
 | **History and notes storage** | Local · Tree · Remote | Using notes |
+| **New window requests** | off · pi-limits · unrestricted (default) | Using notes |
 | **Use notes for tree summaries** | On (default) · Off | Using notes |
 | **Share subagent context** | Off (default) · On | Using notes |
 | **Idle rollover** | Off (default) · 5 · 15 · 25 · 55 minutes | Using Notes and history on an eligible route |
@@ -168,7 +169,11 @@ The model receives history, notes, rollover and remaining-context tools. Code an
 
 Remote results remain tied to their original context family and Codex account. An account mismatch makes pinned notes unavailable without moving them to another account or store. Agents can exchange needed context through messages. Re-reading a completed result does not count as a new note checkpoint.
 
-With **Notes and history**, `/compact` reuses notes from the last completed run and opens a window without starting a new turn. New input or another run makes those notes stale. Without fresh notes, or with checkpoint instructions, it asks the agent to save state, then opens the window after that run settles. A failed or missing note leaves the current window in place. With **Notes + history + compaction**, explicit `new_context` compacts before rollover.
+With **Notes and history**, `/compact` reuses notes from the last completed run and opens a window without starting a new turn. New input or another run makes those notes stale. Without fresh notes, or with checkpoint instructions, it asks the agent to save state, then opens the window after that run settles. A failed or missing note leaves the current window in place. With **Notes + history + compaction**, explicit `new_context` attempts compaction before rollover.
+
+**New window requests** controls agent requests independently of the continuity strategy. **off** hides `new_context`. **pi-limits** requires Pi to accept the history for compaction, including with notes-only continuity. A declined request continues in the same window. **unrestricted** permits requests at any size. If normal compaction has nothing to summarise, it opens a new identity without trimming the existing context. Other failures do not open a window. Manual `/compact` and idle rollover are unaffected.
+
+Before `new_context`, the immediately preceding tool invocation must successfully save a context note. Direct notes writes, nested writes completed by `exec`, and writes completed through `wait` count. Failed or unfinished writes and intervening read-only calls do not count.
 
 **Note save markers** in `/codex display` is off by default. When enabled, completed turns with confirmed saved notes get a **✓ Notes saved** marker. The next user prompt gets a **Notes** bookmark in `/tree` once it arrives. Select that prompt with **No summary** to return to the saved-notes boundary with your prompt back in the editor. Run plain `/compact` in **Notes and history**, then resubmit the prompt. A new window opens without another note-writing turn. Tree navigation preserves the checkpoint's original idle age. Existing user labels are preserved, and turning markers off keeps saved bookmarks.
 

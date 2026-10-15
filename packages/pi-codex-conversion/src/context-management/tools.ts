@@ -17,6 +17,7 @@ import { HISTORY_NESTED_USAGE, NOTES_NESTED_USAGE } from "./tool-contract.ts";
 import { syncAdapter } from "../adapter/activation/activation.ts";
 import type { ContextRouter } from "../context-sharing.ts";
 import { contextAgentIdentity, contextTargetAgent } from "./agent-identity.ts";
+import { hasFreshContextNotes } from "./saved-notes.ts";
 
 const EMPTY_PARAMETERS = Type.Object({}, { additionalProperties: false });
 
@@ -48,12 +49,18 @@ export function createContextWindowTools(
 			executionMode: "sequential",
 			async execute(_id, _params, signal, _update, ctx) {
 				const plan = assertContextManagementActive(ctx, state);
+				if (plan.newWindowRequests === "off") throw new Error("New window requests are disabled. Continue in this window.");
+				const identity = state.contextWindows.currentIdentity();
+				if (!identity || !hasFreshContextNotes(ctx.sessionManager.getBranch(), identity.currentWindowId,
+					plan.contextManagementMode, false, _id))
+					throw new Error("Save a context note immediately before requesting a new window, then call new_context.");
 				if (state.contextKickoff.hasIdleInput) return {
 					content: [{ type: "text", text: "A new window will open after this checkpoint. Save your notes and finish your reply." }],
 					details: { started: false },
 				};
-				const started = plan.compactOnRollover
-					? state.contextWindows.scheduleRolloverCompaction()
+				const usesPi = plan.compactOnRollover || plan.newWindowRequests === "pi-limits";
+				const started = usesPi
+					? state.contextWindows.scheduleRolloverCompaction(plan.newWindowRequests, plan.compactOnRollover)
 					: plan.contextManagementMode === "tree"
 					? state.contextTree.schedule(ctx)
 					: await state.contextKickoff.startWindow(pi, ctx, {
@@ -63,15 +70,15 @@ export function createContextWindowTools(
 						trimPreviousWindow: true,
 					});
 				// Pi's terminate flag only stops a batch when every result terminates.
-				if (started && !plan.compactOnRollover) ctx.abort();
+				if (started && !usesPi) ctx.abort();
 				return {
 					...(started ? { terminate: true } : {}),
 					content: [
 						{
 							type: "text",
 							text: started
-								? plan.compactOnRollover
-									? "A new context window will continue from a compaction checkpoint."
+								? usesPi
+									? "Window request scheduled; continuation follows after Pi checks the history."
 									: "A new context window will start without summarizing conversation history."
 								: "A new context window is already scheduled.",
 						},

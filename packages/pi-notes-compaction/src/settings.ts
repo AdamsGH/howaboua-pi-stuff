@@ -3,6 +3,12 @@ import { dirname } from "node:path";
 
 export const IDLE_MINUTES = [0, 5, 15, 25, 55] as const;
 export type IdleMinutes = (typeof IDLE_MINUTES)[number];
+export const NEW_WINDOW_REQUESTS = [
+	"off",
+	"pi-limits",
+	"unrestricted",
+] as const;
+export type NewWindowRequests = (typeof NEW_WINDOW_REQUESTS)[number];
 export const DEFAULT_MODEL_WHITELIST = [
 	"gpt-6-astra",
 	"gpt-6-sol",
@@ -13,6 +19,7 @@ export interface NotesSettings {
 	active: "all" | "whitelist";
 	modelWhitelist: string[];
 	normalCompaction: boolean;
+	newWindowRequests: NewWindowRequests;
 	idleMinutes: IdleMinutes;
 	taskBoundaryReminder: number;
 }
@@ -27,6 +34,7 @@ export function readSettings(path: string): NotesSettings {
 				active: "all",
 				modelWhitelist: [...DEFAULT_MODEL_WHITELIST],
 				normalCompaction: false,
+				newWindowRequests: "unrestricted",
 				idleMinutes: 0,
 				taskBoundaryReminder: 0,
 			};
@@ -43,6 +51,14 @@ export function readSettings(path: string): NotesSettings {
 			"Invalid notes settings. Save a setting in /notes, then reload Pi.",
 		);
 	const idleMinutes = "idleMinutes" in settings ? settings.idleMinutes : 0;
+	const newWindowRequests =
+		"newWindowRequests" in settings
+			? settings.newWindowRequests
+			: "unrestricted";
+	if (!NEW_WINDOW_REQUESTS.some((value) => value === newWindowRequests))
+		throw new Error(
+			"Invalid new window requests setting. Choose off, pi-limits or unrestricted in /notes.",
+		);
 	const taskBoundaryReminder =
 		"taskBoundaryReminder" in settings ? settings.taskBoundaryReminder : 0;
 	if (
@@ -67,6 +83,7 @@ export function readSettings(path: string): NotesSettings {
 				? (settings.modelWhitelist as string[])
 				: [...DEFAULT_MODEL_WHITELIST],
 		normalCompaction: settings.normalCompaction,
+		newWindowRequests: newWindowRequests as NewWindowRequests,
 		idleMinutes: idleMinutes as IdleMinutes,
 		taskBoundaryReminder,
 	};

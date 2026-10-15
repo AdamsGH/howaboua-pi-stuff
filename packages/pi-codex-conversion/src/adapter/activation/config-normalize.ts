@@ -135,6 +135,8 @@ export function normalizeCodexConversionConfig(
 			),
 		},
 		compaction: {
+			newWindowRequests: compaction["newWindowRequests"] === "off" || compaction["newWindowRequests"] === "pi-limits"
+				? compaction["newWindowRequests"] : "unrestricted",
 			continuity: normalizeContinuityStrategy(compaction["continuity"])
 				?? DEFAULT_CODEX_CONVERSION_CONFIG.compaction.continuity,
 			historyStorage: normalizeHistoryStorage(compaction["historyStorage"])

@@ -36,6 +36,7 @@ interface RuntimePlanBase {
 	notesTreeHandoff: boolean;
 	shareSubagentContext: boolean;
 	compactOnRollover: boolean;
+	newWindowRequests: "off" | "pi-limits" | "unrestricted";
 	idleNotesRollover: IdleNotesMinutes;
 	autoReasoning: boolean;
 }
@@ -169,6 +170,7 @@ export function resolveCodexRuntimePlan(
 		notesTreeHandoff: false,
 		shareSubagentContext: false,
 		compactOnRollover: false,
+		newWindowRequests: config.compaction.newWindowRequests,
 		idleNotesRollover: 0 as IdleNotesMinutes,
 		autoReasoning: false,
 	};
@@ -207,7 +209,7 @@ export function resolveCodexRuntimePlan(
 			: undefined;
 	if (requestedCodeMode) {
 		const contextManagementNested = contextManagement;
-		const contextTools = !contextManagement && !externalNotes ? []
+		const contextTools = (!contextManagement && !externalNotes) || (!externalNotes && base.newWindowRequests === "off") ? []
 			: ["new_context"];
 		const transport = usesResponsesLite(ctx, config)
 			? "responses-lite"
@@ -248,7 +250,7 @@ export function resolveCodexRuntimePlan(
 	return {
 		...base,
 		kind: "normal",
-		toolNames: [...normalToolNames(ctx, config, contextManagement || externalNotes), ...(base.autoReasoning ? ["change_reasoning"] : [])],
+		toolNames: [...normalToolNames(ctx, config, contextManagement || externalNotes).filter(name => name !== "new_context" || externalNotes || base.newWindowRequests !== "off"), ...(base.autoReasoning ? ["change_reasoning"] : [])],
 		prompt: "normal",
 		transport: "responses",
 		nativeCompaction,
@@ -268,6 +270,8 @@ export function resolveCodexRuntimePlanForState(
 		plan.ownedToolNames = plan.ownedToolNames.filter(name => !CONTEXT_MANAGEMENT_TOOL_NAMES.includes(name));
 	if (state.externalNotes && plan.kind === "extras")
 		plan.toolNames = [...plan.toolNames, ...CONTEXT_MANAGEMENT_TOOL_NAMES];
+	if (state.externalNotes?.owner.allowsWindowRequests?.() === false)
+		plan.toolNames = plan.toolNames.filter(name => name !== "new_context");
 	const missingToolNames = state.availableToolNames === undefined
 		? []
 		: [...plan.toolNames, ...(plan.contextManagementNested ? ["history", "notes"] : [])]

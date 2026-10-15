@@ -20,11 +20,13 @@ The agent keeps the familiar `notes`, `history`, `new_context` and `get_context_
 
 By default, `new_context` starts a fresh window without generating a summary. The agent receives recent note paths, and Pi's saved history remains available for lookup.
 
+The tool requires a successful checkpoint write immediately before the request. Direct `notes` writes and writes completed through `exec` or `wait` count. A missing, pending or failed write keeps the current run active and asks the agent to save a note first.
+
 Reminders arrive at 85% and 90% context use. With normal compaction off, `/compact` opens a fresh window immediately if the latest completed turn saved fresh notes. Otherwise it requests a checkpoint first. The new window waits for your next prompt; it does not start a continuation turn. Abort, errors and failed writes retain the old context. Overflow recovery still uses Pi's normal compaction.
 
-Pi rejects `/compact` when there is too little history to prepare compaction, before extensions run. In that case, the agent can still use `new_context`.
+Pi rejects `/compact` when there is too little history to prepare compaction, before extensions run. `new_context` follows the separate **New window requests** setting.
 
-Idle rollover is off by default. Choose 5, 15, 25 or 55 minutes in `/notes`. After that interval, the next input waits for rollover only if the latest completed turn saved fresh notes. Otherwise it proceeds in the current window without requesting a checkpoint. These intervals are user preferences, not provider cache-expiry guarantees. Held input retains its original text, attachments and SDK options. A failed rollover keeps input pending. Submit another prompt to retry, or reload to cancel it.
+Idle rollover is off by default. Choose 5, 15, 25 or 55 minutes in `/notes`. After that interval, the next input waits for rollover only if the latest completed turn saved fresh notes. Otherwise it proceeds in the current window without requesting a checkpoint. These intervals are user preferences, not provider cache-expiry guarantees. Held input retains its original text, attachments and SDK options. If normal compaction has nothing to summarise, input proceeds in the current window. A failed rollover keeps input pending. Submit another prompt to retry, or reload to cancel it.
 
 ## Management
 
@@ -32,6 +34,7 @@ Idle rollover is off by default. Choose 5, 15, 25 or 55 minutes in `/notes`. Aft
 
 - **Active** selects **All models** (the default) or **Whitelist**. Whitelist enables the extension only for exact model IDs in the global settings file, regardless of provider. Switching models applies the choice immediately; other models keep their installed compaction behaviour.
 - **Normal compaction** uses the installed Pi or PCC compaction flow for `/compact` and `new_context`. Off keeps notes-only rollover, the default.
+- **New window requests** controls the agent's `new_context` tool independently of the compaction method. **off** disables the tool. **pi-limits** uses Pi's eligibility check and continues in the current window when there is too little history. **unrestricted**, the default, accepts requests at any size. With normal compaction on and nothing to summarise, unrestricted requests open a new window identity without discarding the existing context. Manual `/compact` and idle rollover retain their separate policies.
 - **Idle rollover** selects the interval or disables it.
 - **Prune missing sessions** removes records for missing session files after confirmation. Unknown paths, permission errors and the active session are retained.
 
@@ -44,6 +47,7 @@ The whitelist is preseeded in `<Pi agent directory>/notes-compaction/settings.js
   "active": "whitelist",
   "modelWhitelist": ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-6.1-sol"],
   "normalCompaction": false,
+  "newWindowRequests": "unrestricted",
   "idleMinutes": 0,
   "taskBoundaryReminder": 0
 }

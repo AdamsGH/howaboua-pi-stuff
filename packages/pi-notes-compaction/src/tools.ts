@@ -578,18 +578,18 @@ export function createTools(
 			parameters: Type.Object({}, { additionalProperties: false }),
 			exposure: "model-only",
 			executionMode: "sequential",
-			async execute(_id, _input, signal, _update, ctx) {
+			async execute(id, _input, signal, _update, ctx) {
 				assertActive();
 				if (signal?.aborted) throw new Error("Rollover cancelled");
-				const started = lifecycle.requestRollover(ctx);
+				const started = lifecycle.requestRollover(ctx, id);
 				if (started) ctx.abort();
 				return {
 					...result({
 						started,
 						message: started
-							? lifecycle.normalCompaction
-								? "Normal compaction will run before the new window opens"
-								: "A new window will continue from your notes after this run settles"
+							? lifecycle.newWindowRequests === "pi-limits"
+								? "Window request queued. Pi will check whether enough history can be compacted"
+								: "A new window will open after this run settles"
 							: "A checkpoint or rollover is already pending. Save notes and finish your response",
 					}),
 					...(started ? { terminate: true } : {}),

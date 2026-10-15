@@ -93,23 +93,29 @@ export function createCodexTurnLifecycle(
 				return;
 			}
 			const plan = resolveCodexRuntimePlanForState(ctx, state);
-			if (state.contextWindows.finishTurn(ctx, async () => {
+			if (state.contextWindows.finishTurn(ctx, async (outcome) => {
 				let continued = false;
 				try {
-					if (plan.contextManagementMode === "tree") {
+					if (plan.contextManagementMode === "tree" && outcome !== "no-work") {
+						if (outcome === "notes-only") state.contextTree.schedule(ctx, { triggerTurn: true });
 						runtime.resetTransportAfterCompaction(ctx.sessionManager.getSessionId());
 						await state.contextTree.settle(pi, ctx);
 					} else await state.contextKickoff.startWindow(pi, ctx, {
-						mode: plan.contextManagementMode, triggerTurn: true, trimPreviousWindow: false,
+						mode: plan.contextManagementMode, triggerTurn: true, trimPreviousWindow: outcome === "notes-only",
 					});
 					continued = state.contextKickoff.continue(pi, ctx);
 				} finally {
 					if (!continued) runtime.autoReasoning.settle(ctx);
 				}
+			}, () => {
+				pi.sendMessage({ customType: "codex-context-continuation",
+					content: "Pi declined the new window request because there is no eligible history to compact. Continue in this same window; the existing context is unchanged.",
+					display: false,
+				}, { triggerTurn: true });
 			})) return;
 			// Budget maintenance must not restart an assistant that has already answered.
 			if (state.contextTree.handoff.active || event.toolResults.length === 0) return;
-			const reminder = state.contextWindows.recordBudget(ctx, plan.contextManagement ? plan.contextManagementMode : "off",
+			const reminder = state.contextWindows.recordBudget(ctx, plan.contextManagement && plan.newWindowRequests !== "off" ? plan.contextManagementMode : "off",
 				undefined, pi.getActiveTools().includes("new_context") ? state.config.compaction.taskBoundaryReminder : 0);
 			if (reminder) return { entries: [...event.entries, reminder], continue: true };
 		},
