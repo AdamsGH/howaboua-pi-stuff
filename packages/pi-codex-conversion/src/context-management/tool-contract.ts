@@ -17,10 +17,10 @@ export type HistoryAction = (typeof HISTORY_ACTIONS)[number];
 export type NotesAction = (typeof NOTES_ACTIONS)[number];
 
 export const HISTORY_DESCRIPTION =
-	"Prior-window detail. Pass IDs unchanged. Search, never browse.";
+	"Search earlier conversation, don't browse it. Pass returned IDs unchanged";
 
 export const NOTES_DESCRIPTION =
-	"Cross-window notes. write_file replaces; append_to_file adds. Virtual paths: relative uses current agent; cross-agent uses <agent>/notes[/path].";
+	"Persistent notes. write_file replaces; append_to_file adds. Virtual paths: relative uses current agent; cross-agent uses <agent>/notes[/path].";
 
 export const HISTORY_NESTED_USAGE =
 	"await tools.history({ action, ...args }) // actions(required args): list_windows(); list_items(); read_item(item_id,window_id); search_contents(query)";

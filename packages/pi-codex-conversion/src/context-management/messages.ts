@@ -49,9 +49,9 @@ export interface ContextWindowCompactionDetails {
 }
 
 const CONTEXT_WINDOW_GUIDANCE = `<context_window_guidance>
-Keep one checkpoint per task at a stable path: request, constraints, decisions, progress, next steps, history IDs. Replace stale state; mark completion in place. Keep reusable findings and deferred ideas in separate topic notes; link, don't copy. Recording isn't permission to implement.
+Notes persist across windows. Keep one checkpoint per task at a stable path, covering the request, constraints, decisions, progress, next steps and history IDs so you can resume without rereading the conversation. Replace stale state; mark completion in place. Keep reusable findings and deferred ideas in separate topic notes; link, don't copy. Recording isn't permission to implement.
 
-Save changed state after substantial work, before replying, and before new_context or handoff. Skip routine or unchanged state. Include checkpoint paths in handoffs. After rollover, read the checkpoint, then linked notes as needed; history only for missing details.
+Save changed state after substantial work, before replying, and before new_context or handoff. Skip routine or unchanged state. Include checkpoint paths in handoffs. After rollover, read the checkpoint, then linked notes as needed. History retrieves earlier conversation; use it only for missing details.
 </context_window_guidance>`;
 
 export function rewriteContextWindowGuidance(content: string): string {
@@ -79,13 +79,13 @@ export function renderContextWindowMessage(
 
 export function renderContextWindowReminder(remainingPercent: number, urgent: boolean): string {
 	return `<context_window_reminder>
-${urgent ? "Urgent: " : ""}${remainingPercent}% remaining. Checkpoint the active request, state and known history IDs in notes, then call new_context ${urgent ? "now, before other work" : "before continuing work"}.
+${urgent ? "Urgent: " : ""}${remainingPercent}% context remaining. Save the task state in notes, then call new_context ${urgent ? "now, before other work" : "before continuing work"}.
 </context_window_reminder>`;
 }
 
 export function renderManualContextCheckpoint(customInstructions?: string): string {
 	return `<context_window_reminder>
-Context checkpoint requested. Save the current state with notes, then finish your response. The new window opens after this run settles. Do not call new_context. If saving fails, report the failure without rolling over.
+Save the task state in notes, then finish your reply. A new window opens automatically after your reply; do not call new_context. If saving fails, report the error.
 </context_window_reminder>${customInstructions?.trim() ? `\n\nCheckpoint guidance from /compact:\n${customInstructions}` : ""}`;
 }
 

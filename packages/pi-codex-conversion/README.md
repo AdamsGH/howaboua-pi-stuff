@@ -12,7 +12,7 @@ For the argument and token numbers, read [How I gave Pi 17 tools without loading
 pi install npm:@howaboua/pi-codex-conversion
 ```
 
-Requires Pi 1.1.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64.
+Requires Pi 1.3.0 or newer and Node.js 22.19 or newer. Native helpers for macOS, Linux and Windows are bundled for x64 and arm64.
 
 Open `/codex` after installation. Codex-like GPT models use the structured adapter by default.
 
@@ -130,6 +130,7 @@ Choose under `/codex context`:
 | --- | --- | --- |
 | **Continuity strategy** | Compaction · Notes and history · Notes + history + compaction | Always |
 | **History and notes storage** | Local · Tree · Remote | Using notes |
+| **New window requests** | off · pi-limits · unrestricted (default) | Using notes |
 | **Use notes for tree summaries** | On (default) · Off | Using notes |
 | **Share subagent context** | Off (default) · On | Using notes |
 | **Idle rollover** | Off (default) · 5 · 15 · 25 · 55 minutes | Using Notes and history on an eligible route |
@@ -168,7 +169,11 @@ The model receives history, notes, rollover and remaining-context tools. Code an
 
 Remote results remain tied to their original context family and Codex account. An account mismatch makes pinned notes unavailable without moving them to another account or store. Agents can exchange needed context through messages. Re-reading a completed result does not count as a new note checkpoint.
 
-With **Notes and history**, `/compact` reuses notes from the last completed run and opens a window without starting a new turn. New input or another run makes those notes stale. Without fresh notes, or with checkpoint instructions, it asks the agent to save state, then opens the window after that run settles. A failed or missing note leaves the current window in place. With **Notes + history + compaction**, explicit `new_context` compacts before rollover.
+With **Notes and history**, `/compact` reuses notes from the last completed run and opens a window without starting a new turn. New input or another run makes those notes stale. Without fresh notes, or with checkpoint instructions, it asks the agent to save state, then opens the window after that run settles. A failed or missing note leaves the current window in place. With **Notes + history + compaction**, explicit `new_context` attempts compaction before rollover.
+
+**New window requests** controls agent requests independently of the continuity strategy. **off** hides `new_context`. **pi-limits** requires Pi to accept the history for compaction, including with notes-only continuity. A declined request continues in the same window. **unrestricted** permits requests at any size. If normal compaction has nothing to summarise, it opens a new identity without trimming the existing context. Other failures do not open a window. Manual `/compact` and idle rollover are unaffected.
+
+Before `new_context`, the immediately preceding tool invocation must successfully save a context note. Direct notes writes, nested writes completed by `exec`, and writes completed through `wait` count. Failed or unfinished writes and intervening read-only calls do not count.
 
 **Note save markers** in `/codex display` is off by default. When enabled, completed turns with confirmed saved notes get a **✓ Notes saved** marker. The next user prompt gets a **Notes** bookmark in `/tree` once it arrives. Select that prompt with **No summary** to return to the saved-notes boundary with your prompt back in the editor. Run plain `/compact` in **Notes and history**, then resubmit the prompt. A new window opens without another note-writing turn. Tree navigation preserves the checkpoint's original idle age. Existing user labels are preserved, and turning markers off keeps saved bookmarks.
 
@@ -251,11 +256,11 @@ text(status);
 
 ### Pi extension and MCP tools
 
-Pi-callable extension tools automatically appear in `tools` and `ALL_TOOLS`, with no extra registration. An [explicit integration](#extension-apis) takes precedence for the same Pi tool, including its custom behavior and activation gate. Hidden and model-only tools are not imported.
+Pi-callable extension tools automatically appear in `tools`, with no extra registration. `ALL_TOOLS` lists active direct tools and tools with `codemode` exposure. Native extension tools with `deferred` exposure appear in the catalogue only while active in Pi, but remain callable by name while inactive. Catalogue changes leave standing tool instructions unchanged. An [explicit integration](#extension-apis) takes precedence for the same Pi tool, including its custom behaviour and activation gate. Hidden and model-only tools are not imported.
 
-Configure MCP servers once in Pi's built-in MCP extension. Its callable tools and resource helpers use the same bridge. Pi's extension switches, tool restrictions and disabled servers are respected. Pi retains connection management, authentication, permissions and tool hooks; its native `codemode` extension is not required.
+Configure MCP servers once in Pi's built-in MCP extension. Its callable tools and resource helpers use the same bridge and remain discoverable in `ALL_TOOLS`. Pi's extension switches, tool restrictions and disabled servers are respected. Pi retains connection management, authentication, permissions and tool hooks; its native `codemode` extension is not required.
 
-`exec` does not wait for pending MCP connections. In Code and Notebook modes, missing-tool errors identify the MCP namespace when known, otherwise flag ambiguous name prefixes. If that server connects, retry in a new exec cell. If failures repeat, the agent should suggest disabling that specific server to you. This recovery guidance does not retry calls or disable servers.
+`exec` waits for pending MCP connections named in its source before starting the cell. Using `ALL_TOOLS` waits for all enabled servers. Names assembled dynamically or hidden in retained functions may not identify a server. Missing-tool errors identify the MCP namespace when known, otherwise flag ambiguous name prefixes. If that server connects, retry in a new exec cell. Repeated failures may require disabling that server. Calls are never retried automatically and servers are never disabled automatically.
 
 MCP discovery starts from Pi's server summaries. Read, `find` or `filter` the synchronous `ALL_TOOLS` array for complete usage, schemas and server instructions. Each cell's catalogue contains tools connected when that cell starts. Custom and deferred tools use the same catalogue, not another discovery tool.
 

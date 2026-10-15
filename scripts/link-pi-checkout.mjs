@@ -27,7 +27,6 @@ const packageSpecs = [
 	["@earendil-works/pi-agent-core", "agent"],
 	["@earendil-works/pi-tui", "tui"],
 	["@earendil-works/pi-coding-agent", "coding-agent"],
-	["@earendil-works/pi-server", "server"],
 ];
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -90,14 +89,12 @@ if (
 }
 
 const roots = [repoRoot, packageRoot];
-const plans = roots.flatMap((root, index) =>
-	packageSpecs
-		.filter(([name]) => index === 0 || name !== "@earendil-works/pi-server")
-		.map(([name]) => ({
-			name,
-			source: packages.get(name).root,
-			target: join(root, "node_modules", ...name.split("/")),
-		})),
+const plans = roots.flatMap((root) =>
+	packageSpecs.map(([name]) => ({
+		name,
+		source: packages.get(name).root,
+		target: join(root, "node_modules", ...name.split("/")),
+	})),
 );
 
 function stat(path) {

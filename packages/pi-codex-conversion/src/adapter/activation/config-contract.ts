@@ -77,6 +77,7 @@ export interface CodexConversionConfig {
 		backgroundShellCloseShortcut: string;
 	};
 	compaction: {
+		newWindowRequests: "off" | "pi-limits" | "unrestricted";
 		continuity: ContinuityStrategy;
 		historyStorage: HistoryStorage;
 		notesTreeHandoff: boolean;
@@ -150,6 +151,7 @@ export const DEFAULT_CODEX_CONVERSION_CONFIG: CodexConversionConfig = {
 	},
 	compaction: {
 		continuity: "compaction",
+		newWindowRequests: "unrestricted",
 		historyStorage: "local",
 		notesTreeHandoff: true,
 		shareSubagentContext: false,

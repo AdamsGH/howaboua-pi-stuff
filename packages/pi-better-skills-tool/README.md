@@ -8,7 +8,7 @@ Progressive skill discovery for Pi, Code Mode and Notebook Mode. The `skills` to
 pi install npm:@howaboua/pi-better-skills-tool
 ```
 
-Requires Pi 1.0.0 or newer. Install `@howaboua/pi-codex-conversion` 3.0.43 or newer too for Code Mode and Notebook Mode. The extension remains a normal Pi tool when Codex conversion is absent.
+Requires Pi 1.0.0 or newer. Install `@howaboua/pi-codex-conversion` 3.0.52 or newer too for Code Mode and Notebook Mode. The extension remains a normal Pi tool when Codex conversion is absent.
 
 ## Start Pi normally
 
@@ -38,5 +38,3 @@ Separate independent `read` or `list` commands with `;`. Each group resolves ref
 Results stay within 48 KiB of UTF-8 text. Larger results include an `Incomplete` marker and an exact continuation command ending in `--offset <byte>`. Run that command to retrieve the next part. Continuations are stateless and re-read the catalog, so restart the original command if skill files change between calls. Normalized commands, excluding the offset suffix, are limited to 4 KiB to keep continuation instructions within the result budget.
 
 Remove or disable any legacy `codex-conversion-custom-tools/skills.toml` after installing this extension. Keeping both definitions gives Code Mode two tools named `skills`, which it rejects.
-
-The Code Mode surface is freeform because its input is already a compact routed command. It does not add a provider grammar. Code Mode's outer `exec` grammar remains the only constrained grammar involved.

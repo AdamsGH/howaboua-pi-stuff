@@ -248,6 +248,7 @@ export function createCodexTransportStream<TApi extends Api>(
 					effectiveOptions.sessionId, accountId, effectiveOptions.signal,
 					normalizeTimeoutMs(effectiveOptions.websocketConnectTimeoutMs, "websocketConnectTimeoutMs"), effectiveOptions.env,
 					(error) => diagnostics?.({ type: "failure", lane: "prewarm", transport: "websocket", failure: codexDiagnosticsFailure(error) }),
+					diagnostics,
 				);
 			}
 			const reconstructedBody = await deps.prepareRequestBody(model, resolvedContext, effectiveOptions, responsesLite);
@@ -330,8 +331,6 @@ export function createCodexTransportStream<TApi extends Api>(
 			if (transport !== "sse") {
 				validateWebSocketTimeoutOptions(effectiveOptions);
 				for (let attempt = 0; attempt <= streamMaxRetries; attempt++) {
-					// Event partials are authoritative snapshots; a fresh partial makes the
-					// next content-start replace failed-attempt output without a second message start.
 					if (attempt > 0) output = createInitialAssistantMessage(model);
 					let websocketStarted = false;
 					const timing = requestTiming.start(lane, "websocket");
@@ -367,7 +366,6 @@ export function createCodexTransportStream<TApi extends Api>(
 						recordUsage(diagnostics, lane, "websocket", output);
 						await deps.recordUsage?.(accountId, { ...model, id: body.model }, output.usage);
 						stream.push({ type: "done", reason: output.stopReason, message: output });
-						stream.end();
 						return;
 					} catch (error) {
 						timing.finish(effectiveOptions?.signal?.aborted ? "aborted" : "failed");
@@ -509,7 +507,6 @@ export function createCodexTransportStream<TApi extends Api>(
 						token: canonicalSessionToken,
 					});
 					stream.push({ type: "done", reason: output.stopReason, message: output });
-					stream.end();
 					return;
 				} catch (error) {
 					timing?.finish(effectiveOptions?.signal?.aborted ? "aborted" : "failed");
@@ -549,12 +546,12 @@ export function createCodexTransportStream<TApi extends Api>(
 			}
 		} catch (error) {
 			if (!diagnosticsFailureRecorded) recordFailure(effectiveTransport === "sse" ? "sse" : "websocket", error);
+			output.content = output.content.filter(block => block.type !== "toolCall");
 			stream.push({
 				type: "error",
 				reason: (effectiveOptions?.signal?.aborted ? "aborted" : "error") as "aborted" | "error",
 				error: createErrorMessage(output, error, !!effectiveOptions?.signal?.aborted),
 			});
-			stream.end();
 		} finally {
 			await preconnect?.close();
 			deps.onStreamSettled?.();

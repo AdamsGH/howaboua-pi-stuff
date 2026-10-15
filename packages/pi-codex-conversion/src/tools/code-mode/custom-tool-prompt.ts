@@ -43,10 +43,6 @@ function isConfiguredCustomTool(
 	return "command" in tool;
 }
 
-function isDeferredDiscoverableTool(tool: CodeModeToolDefinition): boolean {
-	return tool.deferLoading && isCodeModeToolDiscoverable(tool);
-}
-
 export function isCodeModeToolDiscoverable(tool: CodeModeToolDefinition): boolean {
 	return isConfiguredCustomTool(tool) ||
 		(tool.deferLoading && "invoke" in tool && tool.discoverWhenDeferred === true);
@@ -132,7 +128,8 @@ export function buildCodeModeToolsPrompt(
 		]),
 		buildUsageSection(CUSTOM_TOOLS_HEADING, promotedCustom),
 		buildGuidanceSection(tools),
-		tools.some(isDeferredDiscoverableTool) ? DEFERRED_TOOLS_GUIDANCE : undefined,
+		// The catalogue is always available, even when its first or last tool is unlisted.
+		DEFERRED_TOOLS_GUIDANCE,
 		custom.length > 0 ? CUSTOM_TOOLS_GUIDANCE : undefined,
 	].filter(Boolean);
 	return sections.join("\n");

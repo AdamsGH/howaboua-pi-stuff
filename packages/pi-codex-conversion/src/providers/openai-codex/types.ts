@@ -83,6 +83,11 @@ export interface CodexDiagnosticsFailure {
 	status?: number | undefined;
 }
 export interface CodexRequestDiagnostics {
+	instructionsFingerprint: string;
+	toolsFingerprint: string;
+	cacheKeyFingerprint: string;
+	routingFingerprint: string;
+	optionsFingerprint: string;
 	headersSent: boolean;
 	reasoningEffort: string;
 	serviceTier: string;
@@ -95,6 +100,15 @@ export interface CodexRequestDiagnostics {
 }
 
 export type CodexDiagnosticsEvent = { requestId?: string | undefined } & (
+	| {
+			type: "connection";
+			socketId: string;
+			phase: "created" | "observed" | "client_close" | "closed";
+			initiator: "client" | "peer_or_unknown";
+			cause?: string | undefined;
+			closeCode?: number | undefined;
+			closeReason?: "normal" | "going_away" | "message_too_big" | "abnormal" | "other" | undefined;
+	  }
 	| {
 			type: "timing";
 			lane: CodexDiagnosticsLane;
@@ -122,6 +136,7 @@ export type CodexDiagnosticsEvent = { requestId?: string | undefined } & (
 			sentInputItems: number;
 			model?: string | undefined;
 			socketReused?: boolean | undefined;
+			socketId?: string | undefined;
 			socketAgeMs?: number | undefined;
 			socketLane?: "main" | "keepalive" | undefined;
 			continuation?: WebSocketContinuationDecision | undefined;
@@ -166,6 +181,7 @@ export type CodexDiagnosticsEvent = { requestId?: string | undefined } & (
 	| {
 			type: "prewarm-ready";
 			transport: "websocket";
+			socketId?: string | undefined;
 			socketReused: boolean;
 			socketAgeMs: number;
 			socketLane: "main" | "keepalive";

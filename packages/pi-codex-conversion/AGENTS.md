@@ -1,7 +1,7 @@
 - Port model-native Codex prompts, tools, transport and context into Pi. Add features only for model fit, quota efficiency or Pi integration.
 - Preserve cache/continuation across prompt, tool, request, replay and transport changes.
 - Own GPT harness integration, not universal compatibility, UI, enterprise or a Pi fork. Route uncommon needs to overrides, extensions or forks.
-- Recovery allows one initial WebSocket request plus five fresh full-request retries, then sticky SSE. Fall back immediately on 426 or close 1009.
+- Recovery allows one WebSocket request plus five fresh full-request retries, then sticky SSE. Fall back immediately on 426 or close 1009.
 - Retry server_is_overloaded and slow_down across WebSocket/SSE within one three-minute budget. Honour HTTP/streamed retry delays using monotonic deadlines. Fail if advice exceeds the budget, including across fallback.
 - Before npm/publish/release/merge work, compare src/providers/openai-codex-custom-provider.ts with Pi's stock openai-codex-responses provider: requests, transport/headers, reasoning/tier, retries, termination and touched behaviour.
 - Structured mode uses flat TypeScript tools except native context namespaces. Code uses exec/wait. Notebook adds host-side notebook lifecycle control.
@@ -15,5 +15,6 @@
 - Provider names/endpoints do not define backend identity. Renamed/proxied openai-codex-responses retains Codex transport, Fast Mode and account isolation.
 - Proxies are deliberate policy/monitoring/routing seams. Environment proxies preserve ChatGPT contracts. Explicit openai-responses passthrough supports only its backend's capabilities. Never reject by provider name or assume proxy means non-ChatGPT.
 - Native compaction supports OpenAI Codex and configured OpenAI/Codex passthrough only. V2 needs raw Responses output items, not arbitrary registered streams.
-- Mid-session harness updates stay chronological: developer role if supported, user otherwise—never folded into the initial system prompt as Pi’s fallback does.
+- Reuse `src/developer-messages.ts` for instruction delivery: `trySendCodexDeveloperCustomMessage` preserves caller rendering; false means nothing was sent, so fall back to `pi.sendMessage`. Delivery failures throw, not fall back.
+- `src/adapter/developer-messages.ts` promotes authenticated custom-message carriers to Responses developer items in place. Preserve chronology and keep UI/history identity separate from provider role; never route these through Pi system-prompt updates.
 - After TypeScript topology changes, run root bun run knip.

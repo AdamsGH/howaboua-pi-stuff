@@ -47,6 +47,7 @@ export interface NotesOwner {
 	projectBranch(entries: readonly SessionEntry[]): SessionEntry[];
 	/** Consult before compaction work; the owner's hook performs notes-only rollover. */
 	allowsCompaction?(reason: SessionBeforeCompactEvent["reason"]): boolean;
+	allowsWindowRequests?(): boolean;
 	/** Only this owner's pristine initialization may precede a family binding. */
 	canBind?(ctx: ExtensionContext): boolean;
 	snapshotNotes?(entries: readonly SessionEntry[], agentName: string): import("./local-notes.ts").NoteSnapshotData;

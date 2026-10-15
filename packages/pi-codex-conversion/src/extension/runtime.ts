@@ -70,6 +70,7 @@ export interface CodexExtensionRuntime {
 	projectContextMessages(ctx: CodexContext, messages?: readonly AgentMessage[]): AgentMessage[];
 	execEnv(config?: CodexConversionConfig): NodeJS.ProcessEnv;
 	prepareTurn(ctx: CodexContext): void;
+	suspendOrdinaryPrewarm(): void;
 	finishTurn(): void;
 	beforeRequestSend(model: Model<Api>, context: TranscriptContext, body: ResponsesBody, options: OpenAICodexStreamOptions | undefined, responsesLite: boolean): Promise<void>;
 	startCompactionPrewarm(ctx: CodexContext): Promise<CodexPrewarmResult> | undefined;
@@ -324,7 +325,7 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 			branch,
 			allEntries,
 		);
-		return projectTreeHandoffReads(projected, checkpointBranch)
+		return projectTreeHandoffReads(state.notesProjection?.projectMessages(projected) ?? projected, checkpointBranch)
 			.filter((message) => !isProviderContextExcludedMessage(message));
 	};
 
@@ -441,12 +442,15 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 			requestContext = ctx;
 			ordinaryPrewarmPending = true;
 		},
+		suspendOrdinaryPrewarm() {
+			ordinaryPrewarmPending = false;
+		},
 		finishTurn() {
 			requestContext = undefined;
 			ordinaryPrewarmPending = false;
 		},
 		async beforeRequestSend(model, context, body, options, responsesLite) {
-			const ctx = options?.remoteDeliveryContext ?? requestContext;
+			const ctx = options?.remoteDeliveryContext ?? (options?.canonicalCompaction ? undefined : requestContext);
 			await validateRemoteRequest(ctx, model, context, body, options, responsesLite);
 			if (!ctx || options?.sessionId !== ctx.sessionManager.getSessionId()
 				|| model.provider !== ctx.model?.provider || model.api !== ctx.model.api || model.id !== ctx.model.id
@@ -540,7 +544,10 @@ export function createCodexExtensionRuntime(pi: ExtensionAPI, recordUsage?: Code
 			} else closeOpenAICodexWebSocketSessions();
 		},
 		resetTransportAfterCompaction(sessionId) {
+			const continuingContext = requestContext;
 			runtime.resetTransport(sessionId);
+			if (continuingContext?.sessionManager.getSessionId() === sessionId)
+				requestContext = continuingContext;
 			closeOpenAICodexWebSocketSessions(sessionId);
 		},
 		shutdownTransport(sessionId) {

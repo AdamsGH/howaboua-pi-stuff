@@ -11,12 +11,10 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 	ExtensionEvent,
-	InputEvent,
 	SessionBeforeCompactEvent,
 	SessionEntry,
 } from "@earendil-works/pi-coding-agent";
 import type { ContextManagementMode, IdleNotesMinutes } from "../adapter/activation/config.ts";
-import { tryStartCodexPreparedIdleKickoff } from "../developer-messages.ts";
 import { loadHistoryNotesThreadHint } from "./history-notes.ts";
 import { hasFreshContextNotes } from "./saved-notes.ts";
 import {
@@ -57,7 +55,12 @@ export class CodexContextWindowManager {
 	private identity: ContextWindowIdentity | undefined;
 	private readonly budget = new ContextWindowBudget();
 	private rolloverPending: object | undefined;
-	private rolloverCompaction: { phase: "scheduled" | "running" } | undefined;
+	private rolloverCompaction: {
+		phase: "scheduled" | "running";
+		permission: "off" | "pi-limits" | "unrestricted";
+		compact: boolean;
+		eligibleSignal?: AbortSignal;
+	} | undefined;
 	private manualCheckpoint: {
 		identity: ContextWindowIdentity;
 		mode: ContextManagementMode;
@@ -70,8 +73,6 @@ export class CodexContextWindowManager {
 		reminderId: string;
 		mode: ContextManagementMode;
 		phase: "awaiting" | "running";
-		prompt: string;
-		admitted: boolean;
 	} | undefined;
 	private trimPendingWindowId: string | undefined;
 	private readonly loadThreadHint: ThreadHintLoader;
@@ -150,11 +151,8 @@ export class CodexContextWindowManager {
 			const details = entry.details.contextManagement;
 			if (details.kind === "window" || details.kind === "identity")
 				this.identity = identityFromDetails(entry.details, entry.content);
-			if (details.kind === "window") {
-				this.trimPendingWindowId = details.trimPreviousWindow
-					? details.currentWindowId
-					: undefined;
-			}
+			if (details.kind === "window" && details.trimPreviousWindow)
+				this.trimPendingWindowId = details.currentWindowId;
 			this.budget.restore(details.kind, details.currentWindowId);
 		}
 	}
@@ -206,7 +204,7 @@ export class CodexContextWindowManager {
 		allEntries: readonly SessionEntry[] = activeEntries,
 	): AgentMessage[] {
 		let boundaryIndex = -1;
-		let trimPreviousWindow = false;
+		let trimBoundaryIndex = -1;
 		for (let index = 0; index < messages.length; index += 1) {
 			const message = messages[index]!;
 			if (
@@ -220,23 +218,25 @@ export class CodexContextWindowManager {
 				this.identity = identityFromDetails(message.details, message.content);
 			if (!isContextWindowBoundary(message)) continue;
 			boundaryIndex = index;
-			trimPreviousWindow = message.details.contextManagement.trimPreviousWindow === true;
+			if (message.details.contextManagement.trimPreviousWindow === true) trimBoundaryIndex = index;
 			this.identity = identityFromDetails(
 				message.details as CodexContextManagementMessageDetails,
 				message.content,
 			);
 		}
 		if (boundaryIndex >= 0) this.rolloverPending = undefined;
-		const projected = trimPreviousWindow && boundaryIndex >= 0 && !hasRealCompactionAfterWindowBoundary(activeEntries)
-			? checkpointWindow(messages, boundaryIndex) : [...messages];
+		let projected = trimBoundaryIndex >= 0 && !hasRealCompactionAfterWindowBoundary(activeEntries)
+			? checkpointWindow(messages, trimBoundaryIndex) : [...messages];
+		if (mode !== "off" && this.identity)
+			projected = restoreCompactedIdentity(projected, activeEntries, this.identity);
 		if (mode === "tree") return filterTreeArchiveSummaries(projected, buildTreeArchiveIndex(allEntries, activeEntries));
 		return mode === "off" ? projected.filter((message) =>
 			message.role !== "custom" || message.customType !== CODEX_CONTEXT_WINDOW_MESSAGE_TYPE) : projected;
 	}
 
-	scheduleRolloverCompaction(): boolean {
+	scheduleRolloverCompaction(permission: "off" | "pi-limits" | "unrestricted" = "unrestricted", compact = true): boolean {
 		if (this.rolloverCompaction || this.rolloverPending) return false;
-		this.rolloverCompaction = { phase: "scheduled" };
+		this.rolloverCompaction = { phase: "scheduled", permission, compact };
 		return true;
 	}
 
@@ -244,22 +244,41 @@ export class CodexContextWindowManager {
 		if (this.rolloverCompaction?.phase === "scheduled") this.rolloverCompaction = undefined;
 	}
 
-	finishTurn(ctx: ExtensionContext, continueWindow: () => Promise<unknown>): boolean {
+	finishTurn(ctx: ExtensionContext, continueWindow: (outcome: "compacted" | "notes-only" | "no-work") => Promise<unknown>, continueSameWindow: () => void): boolean {
 		if (!this.rolloverCompaction) return false;
 		if (this.rolloverCompaction.phase === "running") return true;
 		const pending = this.rolloverCompaction;
+		const sessionId = ctx.sessionManager.getSessionId();
+		const windowId = this.identity?.currentWindowId;
+		const current = () => this.rolloverCompaction === pending && ctx.sessionManager.getSessionId() === sessionId && this.identity?.currentWindowId === windowId;
+		const open = (outcome: "compacted" | "notes-only" | "no-work") => {
+			if (!current()) return;
+			this.rolloverCompaction = undefined;
+			void continueWindow(outcome).catch((error: unknown) => {
+				ctx.ui.notify(`Context rollover failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+			});
+		};
 		pending.phase = "running";
 		// Pi compaction aborts and waits for the loop; the turn hook must return first.
 		ctx.compact({
 			onComplete: () => {
-				if (this.rolloverCompaction !== pending) return;
-				this.rolloverCompaction = undefined;
-				void continueWindow().catch((error: unknown) => {
-					ctx.ui.notify(`Compaction completed, but context rollover failed: ${error instanceof Error ? error.message : String(error)}`, "error");
-				});
+				open("compacted");
 			},
 			onError: (error) => {
-				if (this.rolloverCompaction !== pending) return;
+				if (!current()) return;
+				if (pending.eligibleSignal && !pending.eligibleSignal.aborted && error.message === "Compaction cancelled") {
+					open("notes-only");
+					return;
+				}
+				// Pi exposes no typed no-work outcome. Do not classify other cancellations or failures.
+				if (error.message === "Already compacted" || error.message === "Nothing to compact (session too small)") {
+					if (pending.permission === "unrestricted") open("no-work");
+					else {
+						this.rolloverCompaction = undefined;
+						continueSameWindow();
+					}
+					return;
+				}
 				this.rolloverCompaction = undefined;
 				ctx.ui.notify(`Context rollover failed: ${error.message}`, "error");
 			},
@@ -339,6 +358,11 @@ export class CodexContextWindowManager {
 		| { cancel: true }
 		| { compaction: CompactionResult<ContextWindowCompactionDetails> }
 		| undefined {
+		if (event.reason === "manual" && this.rolloverCompaction?.phase === "running") {
+			if (this.rolloverCompaction.compact) return undefined;
+			this.rolloverCompaction.eligibleSignal = event.signal;
+			return { cancel: true };
+		}
 		if (compactOnRollover) return undefined;
 		if (event.reason === "overflow") return undefined;
 		if (event.reason === "manual") {
@@ -386,7 +410,6 @@ export class CodexContextWindowManager {
 		ctx: Pick<ExtensionContext, "isIdle" | "ui" | "sessionManager">,
 		mode: ContextManagementMode,
 		customInstructions?: string,
-		prompt?: string,
 	): void {
 		if (!this.identity || this.promptedManualCheckpoint) throw new Error("A context checkpoint cannot start yet");
 		const idle = ctx.isIdle();
@@ -398,25 +421,13 @@ export class CodexContextWindowManager {
 			reminderId: reminder.details.id,
 			mode,
 			phase: idle ? "awaiting" : "running",
-			prompt: prompt ?? "Continue.",
-			admitted: false,
 		};
 		try {
-			pi.sendMessage(reminder, idle ? { triggerTurn: false } : { deliverAs: "steer", triggerTurn: true });
-			if (idle && !tryStartCodexPreparedIdleKickoff(pi, ctx, checkpoint.prompt))
-				pi.sendUserMessage(checkpoint.prompt, { deliverAs: "steer" });
+			pi.sendMessage(reminder, { deliverAs: "steer", triggerTurn: true });
 		} catch (error) {
 			if (this.promptedManualCheckpoint === checkpoint) this.promptedManualCheckpoint = undefined;
 			throw error;
 		}
-	}
-
-	admitPromptedCheckpointInput(event: InputEvent): boolean {
-		const pending = this.promptedManualCheckpoint;
-		if (!pending || pending.phase !== "awaiting" || pending.admitted ||
-			event.source !== "extension" || event.text !== pending.prompt) return false;
-		pending.admitted = true;
-		return true;
 	}
 
 	beginPromptedManualCheckpointRun(): void {
@@ -481,9 +492,7 @@ export class CodexContextWindowManager {
 	): void {
 		identity = { ...identity, agentName: contextAgentIdentity(ctx).agentName };
 		this.identity = identity;
-		this.trimPendingWindowId = options.trimPreviousWindow
-			? identity.currentWindowId
-			: undefined;
+		if (options.trimPreviousWindow) this.trimPendingWindowId = identity.currentWindowId;
 		pi.sendMessage(createContextWindowMessage(
 			renderContextWindowMessage(identity, threadHint, identity.agentName),
 			"window",
@@ -496,8 +505,10 @@ export class CodexContextWindowManager {
 
 /** Apply the same explicit retirement boundary to compaction and native replay. */
 export function projectContextWindowBranch(entries: SessionEntry[]): SessionEntry[] {
-	const boundary = findLatestWindowBoundaryEntry(entries);
-	return boundary?.details.contextManagement.trimPreviousWindow && !hasRealCompactionAfterWindowBoundary(entries)
+	const boundary = entries.findLast(entry => entry.type === "custom_message" &&
+		entry.customType === CODEX_CONTEXT_WINDOW_MESSAGE_TYPE && isCodexContextManagementMessageDetails(entry.details) &&
+		entry.details.contextManagement.kind === "window" && entry.details.contextManagement.trimPreviousWindow === true);
+	return boundary && !hasRealCompactionAfterWindowBoundary(entries)
 		? entries.slice(entries.indexOf(boundary)) : entries;
 }
 
@@ -510,7 +521,7 @@ function hasRealCompactionAfterWindowBoundary(entries: readonly SessionEntry[]):
 			entry.type === "custom_message" &&
 			entry.customType === CODEX_CONTEXT_WINDOW_MESSAGE_TYPE &&
 			isCodexContextManagementMessageDetails(entry.details) &&
-			entry.details.contextManagement.kind === "window"
+			entry.details.contextManagement.kind === "window" && entry.details.contextManagement.trimPreviousWindow === true
 		) boundaryIndex = index;
 		if (entry.type === "compaction" && !isContextWindowCompactionDetails(entry.details))
 			compactionIndex = index;
@@ -523,6 +534,29 @@ function checkpointWindow(messages: readonly AgentMessage[], boundaryIndex: numb
 	const checkpoint = getCurrentSystemMessage(messages.slice(0, boundaryIndex));
 	const tail = messages.slice(boundaryIndex);
 	return checkpoint ? [checkpoint, ...tail] : tail;
+}
+
+function restoreCompactedIdentity(messages: AgentMessage[], entries: readonly SessionEntry[], identity: ContextWindowIdentity): AgentMessage[] {
+	const summary = messages.findIndex(message => message.role === "compactionSummary");
+	if (summary < 0 || messages[0]?.role !== "system" || messages.some(message => message.role === "custom" && message.customType === CODEX_CONTEXT_WINDOW_MESSAGE_TYPE &&
+		isCodexContextManagementMessageDetails(message.details) &&
+		(message.details.contextManagement.kind === "window" || message.details.contextManagement.kind === "identity") &&
+		message.details.contextManagement.currentWindowId === identity.currentWindowId)) return messages;
+	const compaction = entries.findLast(entry => entry.type === "compaction");
+	const source = entries.findLast(entry => entry.type === "custom_message" && entry.customType === CODEX_CONTEXT_WINDOW_MESSAGE_TYPE &&
+		isCodexContextManagementMessageDetails(entry.details) &&
+		(entry.details.contextManagement.kind === "window" || entry.details.contextManagement.kind === "identity") &&
+		entry.details.contextManagement.currentWindowId === identity.currentWindowId);
+	if (!compaction || source?.type !== "custom_message" || typeof source.content !== "string" || !isCodexContextManagementMessageDetails(source.details)) return messages;
+	const { trimPreviousWindow: _trim, ...contextManagement } = source.details.contextManagement;
+	// Carry the older identity ahead of its summary, outside opaque native replay.
+	const restored: AgentMessage = {
+		role: "custom", customType: CODEX_CONTEXT_WINDOW_MESSAGE_TYPE,
+		content: `${source.content}\n\nIf no checkpoint is available, use history to recover missing context.`,
+		display: false, timestamp: messages[summary]!.timestamp,
+		details: { ...source.details, id: `${compaction.id}:identity`, contextManagement: { ...contextManagement, kind: "identity" } } satisfies CodexContextManagementMessageDetails,
+	};
+	return [...messages.slice(0, summary), restored, ...messages.slice(summary)];
 }
 
 function identityFromDetails(
