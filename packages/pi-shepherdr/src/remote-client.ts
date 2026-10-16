@@ -17,7 +17,7 @@ import type {
 	SessionView,
 } from "./types.js";
 
-const BRIDGE_VERSION = 21;
+const BRIDGE_VERSION = 22;
 const REMOTE_HELPER = "~/.pi/agent/shepherdr.mjs";
 const REMOTE_PEER_HELPER = "~/.pi/agent/shepherdr-peer.mjs";
 const REMOTE_CHANNEL_HELPER = "~/.pi/agent/shepherdr-channel.mjs";

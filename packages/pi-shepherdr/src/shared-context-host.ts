@@ -57,12 +57,25 @@ export async function registerSharedAgentContext(
 	let unregister: (() => void) | undefined;
 	const publish = async (ctx: ExtensionContext) => {
 		const file = ctx.sessionManager.getSessionFile();
-		if (file)
+		if (!file) return;
+		try {
 			close = await listenContext(
 				sessionContextPath(file),
 				(request: unknown, signal: AbortSignal) =>
 					shared.handle(ctx, request, signal),
 			);
+		} catch (error) {
+			if (
+				!(error instanceof Error) ||
+				!("code" in error) ||
+				error.code !== "SHARED_CONTEXT_ALREADY_OPEN"
+			)
+				throw error;
+			ctx.ui.notify(
+				"This session is open in another window. Agents remain available, but shared context is unavailable here. Close the other window, then /reload here to enable sharing.",
+				"warning",
+			);
+		}
 	};
 	pi.on("session_start", async () => {
 		await close?.();

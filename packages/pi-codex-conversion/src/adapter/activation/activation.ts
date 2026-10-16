@@ -45,7 +45,6 @@ function enableExtraTools(
 		state,
 		pi.getActiveTools(),
 		extensionTools,
-		false,
 	);
 	const tools = changed
 		? mergeToolNames(
@@ -79,7 +78,6 @@ function enableAdapter(
 		state,
 		pi.getActiveTools(),
 		extensionTools,
-		plan.kind !== "normal",
 	);
 	let tools = projectedTools;
 	if (changed) {
@@ -108,7 +106,6 @@ function disableAdapter(
 					state,
 					pi.getActiveTools(),
 					extensionTools,
-					false,
 				)
 			: pi.getActiveTools();
 		// Registration cleanup has no prior loadout to restore, even after an earlier activation.
@@ -132,7 +129,6 @@ function reconcileExtensionToolProjection(
 	state: AdapterState,
 	currentTools: string[],
 	extensionTools: ExtensionToolSnapshot,
-	foldIntoCodeMode: boolean,
 ): string[] {
 	const previousTools = state.previousToolNames ?? [];
 	const managedNames = new Set(extensionTools.allToolNames);
@@ -164,10 +160,8 @@ function reconcileExtensionToolProjection(
 	}
 	state.codeModeExtensionToolNames = extensionTools.allToolNames;
 	state.activeCodeModeExtensionToolNames = activeNames;
-	const projected = mergeToolNames(currentTools, releasedActiveNames).filter(
-		(name) => !managedNames.has(name),
-	);
-	if (foldIntoCodeMode) return projected;
+	// Keep nested integrations active so Pi records their admission for resume/tree.
+	// The Code Mode loadout bridge hides their provider-facing declarations instead.
 	const exposedActiveNames = state.previousToolNames.filter(
 		(name) => activeNameSet.has(name),
 	);

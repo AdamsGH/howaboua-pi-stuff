@@ -84,6 +84,8 @@ function eventFields(event: CodexDiagnosticsEvent): Array<string | undefined> {
 		field("options_fingerprint", event.requestMetadata?.optionsFingerprint),
 		field("socket_lane", event.socketLane),
 		field("continuation", event.continuation),
+		field("continuation_previous_item_type", event.continuationMismatch?.previousItemType),
+		field("continuation_current_item_type", event.continuationMismatch?.currentItemType),
 		field("continuation_input_items", event.continuationBaselineInputItems),
 		field("continuation_response_items", event.continuationBaselineResponseItems),
 		field("canonical_history", event.canonicalHistory),

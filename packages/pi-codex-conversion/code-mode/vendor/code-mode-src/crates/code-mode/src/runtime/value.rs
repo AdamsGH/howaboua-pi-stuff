@@ -4,6 +4,8 @@ use codex_code_mode_protocol::DEFAULT_IMAGE_DETAIL;
 use codex_code_mode_protocol::FunctionCallOutputContentItem;
 use codex_code_mode_protocol::ImageDetail;
 
+use super::RuntimeState;
+
 const IMAGE_HELPER_EXPECTS_MESSAGE: &str = "image expects a non-empty image URL string, an object with image_url and optional detail, or a raw MCP image block";
 const AUDIO_HELPER_EXPECTS_MESSAGE: &str = "audio expects a non-empty audio URL string, an object with audio_url, or a raw MCP audio block";
 const REMOTE_IMAGE_URL_ERROR: &str = "Tool call failed: remote image URLs are not supported in tool outputs. Pass a base64 data URI instead";
@@ -287,6 +289,10 @@ pub(super) fn v8_value_to_json(
     scope: &mut v8::PinScope<'_, '_>,
     value: v8::Local<'_, v8::Value>,
 ) -> Result<Option<JsonValue>, String> {
+    // Reentering V8 during termination can replace it with a catchable exception.
+    if scope.is_execution_terminating() {
+        return Err("JavaScript execution terminated".to_string());
+    }
     let tc = std::pin::pin!(v8::TryCatch::new(scope));
     let mut tc = tc.init();
     let Some(stringified) = v8::json::stringify(&tc, value) else {
@@ -324,10 +330,23 @@ pub(super) fn value_to_error_text(
     {
         return stack.to_rust_string_lossy(scope);
     }
+    // The stack getter can call exit() and V8 can clear its termination before
+    // returning here. Never enter a user-defined toString() after that.
+    if scope
+        .get_slot::<RuntimeState>()
+        .is_some_and(|state| state.exit_requested)
+    {
+        // send_scope_result reports this as successful exit and preserves prior stores.
+        return String::new();
+    }
     value.to_rust_string_lossy(scope)
 }
 
 pub(super) fn throw_type_error(scope: &mut v8::PinScope<'_, '_>, message: &str) {
+    // Preserve V8's uncatchable termination instead of replacing it with a JS error.
+    if scope.is_execution_terminating() {
+        return;
+    }
     if let Some(message) = v8::String::new(scope, message) {
         scope.throw_exception(message.into());
     }

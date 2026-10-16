@@ -37,7 +37,9 @@ export function createPiCodeModeBridge(pi: ExtensionAPI): {
 					output: tool.outputSchema ? JSON.stringify(tool.outputSchema) : undefined,
 					async invoke(input, context, signal) {
 						if (!context.executeTool) throw new Error("Pi nested tool executor is unavailable");
-						const args = input === undefined && Check(tool.parameters, {}) ? {} : input;
+						// The Code host serializes omitted arguments as null; preserve schema-valid nulls.
+						const empty = input === undefined || (input === null && !Check(tool.parameters, null));
+						const args = empty && Check(tool.parameters, {}) ? {} : input;
 						const outcome = await context.executeTool(tool.name, args, { signal, ...(context.onUpdate ? { onUpdate: context.onUpdate } : {}) });
 						const { result } = outcome;
 						const text = result.content.filter((block) => block.type === "text").map((block) => block.text).join("\n");

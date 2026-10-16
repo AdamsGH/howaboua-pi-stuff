@@ -23,3 +23,4 @@ const destination = join(outDir, binaryName);
 copyFileSync(built, destination);
 if (process.platform !== "win32") chmodSync(destination, 0o755);
 console.log(`Wrote ${destination}`);
+console.log(`This is the vendored maintainer build, not the official downloaded host. Set tools.customRustBinariesDir to ${outDir} (with any other overridden native helpers), then /reload to use it.`);
