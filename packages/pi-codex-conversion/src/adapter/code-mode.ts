@@ -88,6 +88,7 @@ export async function registerCodexCodeMode(
 			resolveCodexRuntimePlanForState(ctx as ExtensionContext, runtime.state).kind === "notebook"
 				? "notebook"
 				: "code",
+		customRustBinariesDir: () => runtime.state.config.tools.customRustBinariesDir,
 		notebookOptions: () => ({
 			maxHeapMiB: runtime.state.config.notebook.maxHeapMiB,
 			agentDir: getAgentDir(),

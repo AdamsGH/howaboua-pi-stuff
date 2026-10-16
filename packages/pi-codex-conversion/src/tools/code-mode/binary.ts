@@ -10,6 +10,7 @@ interface CodeModeHostBinaryRuntime {
 	arch: string;
 	packageRoot: string;
 	agentDir: string;
+	customRustBinariesDir: string;
 	install(options: InstallCodeModeHostOptions): Promise<void>;
 }
 
@@ -23,6 +24,7 @@ function resolveRuntime(overrides: Partial<CodeModeHostBinaryRuntime> = {}): Cod
 		arch: overrides.arch ?? process.arch,
 		packageRoot: overrides.packageRoot ?? packageRoot(),
 		agentDir: overrides.agentDir ?? getAgentDir(),
+		customRustBinariesDir: overrides.customRustBinariesDir ?? "",
 		install: overrides.install ?? installCodeModeHost,
 	};
 }
@@ -30,28 +32,26 @@ function resolveRuntime(overrides: Partial<CodeModeHostBinaryRuntime> = {}): Cod
 export function codeModeHostBinaryPath(overrides: Partial<CodeModeHostBinaryRuntime> = {}): string {
 	const runtime = resolveRuntime(overrides);
 	const name = codeModeHostBinaryName(runtime.platform);
+	if (runtime.customRustBinariesDir) {
+		const custom = join(runtime.customRustBinariesDir, name);
+		// Like the other native helpers, this directory overrides individual filenames.
+		if (existsSync(custom)) return custom;
+	}
 	const bundled = join(
 		runtime.packageRoot,
 		"code-mode",
 		"bin",
+		HOST_RELEASE,
 		`${runtime.platform}-${runtime.arch}`,
 		name,
 	);
 	if (existsSync(bundled)) return bundled;
-	const development = join(
-		runtime.packageRoot,
-		"code-mode",
-		"vendor",
-		"code-mode-src",
-		"target",
-		"release",
-		name,
-	);
-	if (existsSync(development)) return development;
+	// Unversioned local builds may track a different source baseline than the release.
+	// Never let one silently shadow the pinned downloaded host.
 	const cached = codeModeHostCachePath(name, runtime);
 	if (existsSync(cached)) return cached;
 	throw new Error(
-		`No code-mode host binary for ${runtime.platform}-${runtime.arch}. Reinstall the package or build it with \`bun run build:code-mode-host\``,
+		`No code-mode host binary for ${runtime.platform}-${runtime.arch}. Reinstall the package to download the supported runtime.`,
 	);
 }
 
