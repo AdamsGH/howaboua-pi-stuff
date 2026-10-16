@@ -12,3 +12,4 @@ Local Code runtime builds now require `tools.customRustBinariesDir` to point to 
 - Fixed cancelled Code cells continuing during startup, waits or output conversion.
 - Code mode now downloads the Codex 0.163 runtime.
 - Added specific WebSocket continuation failure reasons and mismatched item types to opt-in diagnostics.
+- Commands now drain late output for up to one second after exit instead of waiting indefinitely for child processes.
