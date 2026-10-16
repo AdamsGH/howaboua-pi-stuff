@@ -83,6 +83,12 @@ Pi projects forced prompts onto requests without recording them in the transcrip
 
 Live cache/compaction validation used source commit `e4c75a732`; it has not been repeated against published Pi `0.99.1`. Isolated SDK captures verify final prompts and tools, not provider cache hits.
 
+## October 16 continuation diagnostics
+
+Reviewed Codex `rust-v0.163.0` at `83086188ae`. Adapted the bounded continuation failure labels from `fac5d0ba91b991ddb5a0f049289acd84135927b5` (#51895): changed request properties and mismatched input item types reach opt-in logs, including compaction prewarm. Unknown property names and item types are never logged verbatim. Existing request comparisons, pending-tool-output continuation, retry policy and wire payloads remain unchanged.
+
+Code Mode runtime backports are recorded in [`code-mode/UPSTREAM_SYNC.md`](code-mode/UPSTREAM_SYNC.md). The local executor's output-drain adaptation is recorded in [`src/tools/exec/rust/UPSTREAM`](src/tools/exec/rust/UPSTREAM).
+
 ## Monitor on each Codex sync
 
 ### Responses Lite model scope

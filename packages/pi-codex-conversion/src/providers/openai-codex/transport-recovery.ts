@@ -445,6 +445,7 @@ export function createCodexTransportStream<TApi extends Api>(
 						Object.assign(effectiveOptions.compactionDiagnostics, {
 							transport: "sse",
 							continuation: undefined,
+							continuationMismatch: undefined,
 							previousResponseId: false,
 							fullInputItems: body.input.length,
 							sentInputItems: body.input.length,

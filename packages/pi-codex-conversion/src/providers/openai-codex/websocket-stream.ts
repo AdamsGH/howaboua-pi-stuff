@@ -48,15 +48,16 @@ export async function processWebSocketStream<TApi extends Api>(
 	// ChatGPT Codex Responses rejects `store: true` ("Store must be set to false").
 	// WebSocket continuation still works via connection-scoped previous_response_id state.
 	const fullBody = body;
-	const cachedRequest = useCachedContext && entry
+	const cachedRequest: CachedWebSocketRequestBodyResult = useCachedContext && entry
 		? buildCachedWebSocketRequestBody(entry.continuation, fullBody)
-		: { body: fullBody, decision: useCachedContext ? "no_session_cache_entry" : "disabled" } satisfies CachedWebSocketRequestBodyResult;
+		: { body: fullBody, decision: useCachedContext ? "no_session_cache_entry" : "disabled" };
 	const requestBody = cachedRequest.body;
 	const recordDiagnostics = noThrowCodexDiagnosticsSink(diagnostics?.record);
 	if (options?.compactionDiagnostics) {
 		Object.assign(options.compactionDiagnostics, {
 			transport: "websocket",
 			continuation: cachedRequest.decision,
+			continuationMismatch: cachedRequest.mismatch,
 			previousResponseId: Boolean(requestBody.previous_response_id),
 			fullInputItems: fullBody.input.length,
 			sentInputItems: requestBody.input.length,
@@ -86,6 +87,7 @@ export async function processWebSocketStream<TApi extends Api>(
 				socketAgeMs,
 				socketLane: "main",
 				continuation: cachedRequest.decision,
+				...(cachedRequest.mismatch ? { continuationMismatch: cachedRequest.mismatch } : {}),
 				...(entry?.continuation ? {
 					continuationBaselineInputItems: entry.continuation.lastRequestBody.input.length,
 					continuationBaselineResponseItems: entry.continuation.lastResponseItems.length,
@@ -197,9 +199,9 @@ export async function prewarmWebSocket<TApi extends Api>(
 	const idleTimeoutMs = normalizeTimeoutMs(options.timeoutMs ?? options.websocketConnectTimeoutMs ?? DEFAULT_WEBSOCKET_CONNECT_TIMEOUT_MS, "timeoutMs");
 	try {
 		if (options.signal?.aborted) throw new Error("Request was aborted");
-		const cachedRequest = prewarm.kind === "compaction" && !preserveContinuation && !generate && entry
+		const cachedRequest: CachedWebSocketRequestBodyResult = prewarm.kind === "compaction" && !preserveContinuation && !generate && entry
 			? buildCachedWebSocketRequestBody(entry.continuation, body)
-			: { body, decision: "disabled" } satisfies CachedWebSocketRequestBodyResult;
+			: { body, decision: "disabled" };
 		const requestBody = cachedRequest.body;
 		// Acquisition validates the route, credentials and live socket. Keep the
 		// existing baseline; the real request still validates its exact continuation.
@@ -224,6 +226,11 @@ export async function prewarmWebSocket<TApi extends Api>(
 			socketLane,
 			prewarm,
 			continuation: cachedRequest.decision,
+			...(cachedRequest.mismatch ? { continuationMismatch: cachedRequest.mismatch } : {}),
+			...(entry?.continuation ? {
+				continuationBaselineInputItems: entry.continuation.lastRequestBody.input.length,
+				continuationBaselineResponseItems: entry.continuation.lastResponseItems.length,
+			} : {}),
 			previousResponseId: Boolean(requestBody.previous_response_id),
 		});
 		timing.sent();
