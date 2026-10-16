@@ -1,6 +1,6 @@
 {
 	"name": "@howaboua/pi-stuff",
-	"version": "0.0.103",
+	"version": "0.0.104",
 	"description": "all Howaboua Pi extensions and skills",
 	"type": "module",
 	"keywords": [
@@ -22,7 +22,7 @@
 		"@howaboua/pi-gpt-switcher": "0.1.5",
 		"@howaboua/pi-grok-realtime": "0.0.1",
 		"@howaboua/pi-pet": "0.1.6",
-		"@howaboua/pi-shepherdr": "0.2.20",
+		"@howaboua/pi-shepherdr": "0.2.21",
 		"@howaboua/pi-skill-chrome-cdp": "0.0.5",
 		"@howaboua/pi-skill-code": "0.0.3",
 		"@howaboua/pi-skill-foundations": "0.0.3",

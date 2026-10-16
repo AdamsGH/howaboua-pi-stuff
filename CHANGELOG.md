@@ -85,26 +85,19 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-chatgpt-sites/CHANGELOG.md)
 
-### @howaboua/pi-codex-conversion — 4.0.0
+### @howaboua/pi-codex-conversion — 4.0.1
 
-### Breaking changes
+- For sessions saved by an older version, run `/reload` once after updating and complete a turn before restarting.
 
-- Requires Pi 1.3.0 or newer. Removed `tryStartCodexPreparedIdleKickoff`, `tryStartCodexPreparedIdlePrompt` and `updateCodexPreparedIdleKickoff`. Extension authors must use Pi's message APIs instead.
+  Local Code runtime builds now require `tools.customRustBinariesDir` to point to the build directory.
 
-  - Extension-triggered turns now apply Pi's full prompt and tool preparation.
-  - Added **New window requests: off | pi-limits | unrestricted**. `new_context` requires a successful note write immediately beforehand.
-  - Fixed window identity and recovery guidance disappearing after compaction.
-  - PCC now restores its continuity settings when Notes is inactive for the selected model.
-  - Code and Notebook now wait for referenced MCP tools to load.
-  - `ALL_TOOLS` now respects native deferred-tool activation without hiding callable MCP tools.
-  - Fixed concurrent `exec`, `wait` and `notebook` calls colliding.
-  - Fixed quiet shell commands hanging instead of returning a resumable session.
-  - Fixed Notebook output being lost or assigned to the wrong cell.
-  - Fixed Remote tool results blocking continuation after automatic compaction.
-  - Malformed tool arguments now fail validation before execution.
-  - Interrupted responses no longer retain unfinished tool calls.
-  - Switching models no longer turns earlier reasoning into answer text.
-  - Added request fingerprints and WebSocket lifecycle events to opt-in diagnostics.
+  - Fixed integration tools disappearing after resuming Code or Notebook sessions.
+  - Fixed no-argument calls such as `tools.agents()` failing in Code mode.
+  - Fixed Code mode `exit()` allowing later callbacks and side effects to run.
+  - Fixed cancelled Code cells continuing during startup, waits or output conversion.
+  - Code mode now downloads the Codex 0.163 runtime.
+  - Added specific WebSocket continuation failure reasons and mismatched item types to opt-in diagnostics.
+  - Commands now drain late output for up to one second after exit instead of waiting indefinitely for child processes.
 
 [Full changelog](./packages/pi-codex-conversion/CHANGELOG.md)
 
@@ -144,13 +137,11 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-explore-subagents/CHANGELOG.md)
 
-### @howaboua/pi-extensions — 0.0.95
+### @howaboua/pi-extensions — 0.0.96
 
 - Include bundled package updates:
 
-  - @howaboua/pi-github-watch: Initial release: opt-in GitHub issue and PR comment watches, with delayed PR checks and notifications that wake the same session across providers.
-  - @howaboua/pi-pet: Desktop attachment now uses Electron 44 and requires macOS 13 or newer, or a supported 64-bit Windows or Linux desktop. Linux ARMv7, 32-bit Windows and Linux Unity are no longer supported. The browser miniapp is unchanged.
-  - @howaboua/pi-shepherdr: Requires Pi 1.2.0 or newer. - Idle assignments and completion reports now apply Pi's full prompt and tool preparation. - Fixed local and remote spawns failing during session startup. - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
+  - @howaboua/pi-shepherdr: Fixed duplicate sessions showing a stack trace instead of a warning explaining how to restore shared context.
 
 [Full changelog](./packages/pi-extensions/CHANGELOG.md)
 
@@ -236,13 +227,9 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-semantic-grep/CHANGELOG.md)
 
-### @howaboua/pi-shepherdr — 0.2.20
+### @howaboua/pi-shepherdr — 0.2.21
 
-- Requires Pi 1.2.0 or newer.
-
-  - Idle assignments and completion reports now apply Pi's full prompt and tool preparation.
-  - Fixed local and remote spawns failing during session startup.
-  - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
+- Fixed duplicate sessions showing a stack trace instead of a warning explaining how to restore shared context.
 
 [Full changelog](./packages/pi-shepherdr/CHANGELOG.md)
 
@@ -298,13 +285,11 @@ Going forward, package-level changelogs remain the source of truth for each pack
 
 [Full changelog](./packages/pi-smart-btw/CHANGELOG.md)
 
-### @howaboua/pi-stuff — 0.0.103
+### @howaboua/pi-stuff — 0.0.104
 
 - Include bundled package updates:
 
-  - @howaboua/pi-github-watch: Initial release: opt-in GitHub issue and PR comment watches, with delayed PR checks and notifications that wake the same session across providers.
-  - @howaboua/pi-pet: Desktop attachment now uses Electron 44 and requires macOS 13 or newer, or a supported 64-bit Windows or Linux desktop. Linux ARMv7, 32-bit Windows and Linux Unity are no longer supported. The browser miniapp is unchanged.
-  - @howaboua/pi-shepherdr: Requires Pi 1.2.0 or newer. - Idle assignments and completion reports now apply Pi's full prompt and tool preparation. - Fixed local and remote spawns failing during session startup. - Supervision reminders now distinguish other agents' tasks from the current task after compaction.
+  - @howaboua/pi-shepherdr: Fixed duplicate sessions showing a stack trace instead of a warning explaining how to restore shared context.
 
 [Full changelog](./packages/pi-stuff/CHANGELOG.md)
 

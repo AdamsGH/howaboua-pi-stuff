@@ -1,5 +1,9 @@
 # @howaboua/pi-shepherdr
 
+## 0.2.21
+
+- Fixed duplicate sessions showing a stack trace instead of a warning explaining how to restore shared context.
+
 ## 0.2.20
 
 - Requires Pi 1.2.0 or newer.

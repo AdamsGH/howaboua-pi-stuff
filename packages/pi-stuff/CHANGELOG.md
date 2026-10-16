@@ -1,5 +1,11 @@
 # @howaboua/pi-stuff
 
+## 0.0.104
+
+- Include bundled package updates:
+
+  - @howaboua/pi-shepherdr: Fixed duplicate sessions showing a stack trace instead of a warning explaining how to restore shared context.
+
 ## 0.0.103
 
 - Include bundled package updates:
