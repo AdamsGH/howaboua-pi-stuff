@@ -66,7 +66,10 @@ function customToolNames(code: string): string[] {
 
 function previewCode(code: string, theme: CodeModeRenderTheme): string {
 	const highlighted = highlightCode(code.trim(), "javascript");
-	const lines = highlighted.slice(0, 3).map((line) => truncateToWidth(`  ${line}`, 100, "..."));
+	// Syntax highlighting only sets foreground colors. Preserve the enclosing card's background.
+	const lines = highlighted.slice(0, 3).map((line) =>
+		truncateToWidth(`  ${line}`, 100, "...").replaceAll("\x1b[0m", "\x1b[39m"),
+	);
 	const skippedCount = highlighted.length - lines.length;
 	if (skippedCount > 0) lines.push(theme.fg("muted", `  ... (${skippedCount} more lines, ${expandHint()})`));
 	return lines.join("\n");
